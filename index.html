@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pluggkompis - Förhörs- & Studieverktyg Online</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- PeerJS bibliotek för P2P Multiplayer utan server backend -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        /* 3D Flip Card Effect */
+        .perspective-1000 {
+            perspective: 1000px;
+        }
+        .transform-style-3d {
+            transform-style: preserve-3d;
+        }
+        .backface-hidden {
+            backface-visibility: hidden;
+        }
+        .rotate-y-180 {
+            transform: rotateY(180deg);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        @keyframes pulse-subtle {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.85; transform: scale(0.98); }
+        }
+        .pulse-active {
+            animation: pulse-subtle 2s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="text-slate-800 min-h-screen flex flex-col justify-between">
+
+    <!-- Header / Navbar -->
+    <header class="bg-indigo-600 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('flashcards')">
+                <div class="bg-white/20 p-2 rounded-lg text-xl">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight flex items-center gap-2">
+                        Pluggkompis
+                        <span class="bg-indigo-800 text-indigo-200 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border border-indigo-400/30">Online</span>
+                    </h1>
+                    <p class="text-xs text-indigo-200">Träna & Förhöra inför prov</p>
+                </div>
+            </div>
+
+            <!-- Kapitel-väljare -->
+            <div class="flex items-center bg-indigo-700/60 p-1 rounded-xl text-xs sm:text-sm font-medium">
+                <button id="chapter-all" onclick="setChapter('all')" class="px-3 py-1.5 rounded-lg transition-all bg-white text-indigo-900 shadow-sm font-semibold">Alla</button>
+                <button id="chapter-1" onclick="setChapter(1)" class="px-3 py-1.5 rounded-lg transition-all text-indigo-100 hover:text-white">Kap 1: Medier</button>
+                <button id="chapter-2" onclick="setChapter(2)" class="px-3 py-1.5 rounded-lg transition-all text-indigo-100 hover:text-white">Kap 2: Välfärd</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-5xl mx-auto px-4 py-6 flex-grow w-full">
+
+        <!-- Navigation Tabs -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
+            <button onclick="switchTab('versus')" id="tab-versus" class="tab-btn flex flex-col sm:flex-row items-center justify-center gap-2 p-3 rounded-xl border border-amber-500 bg-amber-50 font-semibold text-amber-900 shadow-sm text-sm">
+                <i class="fa-solid fa-bolt text-amber-500 text-lg"></i>
+                <span>1. Snabbtest 1v1 Online</span>
+            </button>
+            <button onclick="switchTab('quiz-2player')" id="tab-quiz-2player" class="tab-btn flex flex-col sm:flex-row items-center justify-center gap-2 p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition shadow-sm font-medium text-sm text-slate-600">
+                <i class="fa-solid fa-users text-indigo-600 text-lg"></i>
+                <span>2. Förhörskompis</span>
+            </button>
+            <button onclick="switchTab('flashcards')" id="tab-flashcards" class="tab-btn flex flex-col sm:flex-row items-center justify-center gap-2 p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition shadow-sm font-medium text-sm text-slate-600">
+                <i class="fa-solid fa-clone text-indigo-600 text-lg"></i>
+                <span>3. Studiekort</span>
+            </button>
+            <button onclick="switchTab('wordlist')" id="tab-wordlist" class="tab-btn flex flex-col sm:flex-row items-center justify-center gap-2 p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition shadow-sm font-medium text-sm text-slate-600">
+                <i class="fa-solid fa-book-open text-emerald-600 text-lg"></i>
+                <span>4. Ordlista</span>
+            </button>
+        </div>
+
+        <!-- 1. SNABBTEST 1v1 MULTIPLAYER ONLINE -->
+        <section id="sec-versus" class="tab-content space-y-4">
+            
+            <!-- VÄLKOMMEN / LOBBY SKÄRM -->
+            <div id="vs-lobby" class="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
+                <div class="text-center max-w-lg mx-auto space-y-2">
+                    <div class="inline-flex p-3 bg-amber-100 text-amber-600 rounded-2xl text-2xl mb-1">
+                        <i class="fa-solid fa-gamepad"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-800">1v1 Utmaning (Online & Lokal)</h2>
+                    <p class="text-sm text-slate-500">Möt dina klasskamrater över internet eller spela på samma skärm!</p>
+                </div>
+
+                <!-- Steg 1: Användarnamn -->
+                <div class="max-w-md mx-auto bg-slate-50 border border-slate-200 p-5 rounded-2xl space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Ditt Användarnamn</label>
+                        <div class="relative">
+                            <i class="fa-solid fa-user absolute left-3.5 top-3.5 text-slate-400"></i>
+                            <input type="text" id="username-input" placeholder="T.ex. Elev123" class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-300 rounded-xl font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none text-sm">
+                        </div>
+                    </div>
+
+                    <!-- Välj Läge -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                        <button onclick="setupOnlineMode()" class="p-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-sm transition shadow flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-globe"></i> Online Multiplayer
+                        </button>
+                        <button onclick="startLocalVersusGame()" class="p-3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-sm transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-desktop"></i> Samma Skärm
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Online Meny (Visas när Online-knappen trycks) -->
+                <div id="online-setup" class="hidden max-w-md mx-auto space-y-4 pt-4 border-t border-slate-100">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Skapa Rum -->
+                        <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-xl space-y-3">
+                            <h3 class="font-bold text-indigo-900 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-plus-circle"></i> Skapa ett Rum
+                            </h3>
+                            <p class="text-xs text-indigo-700">Skapa ett rum och skicka rumskoden till en kompis.</p>
+                            <button onclick="createOnlineRoom()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-xs shadow transition">
+                                Generera Rumskod
+                            </button>
+                        </div>
+
+                        <!-- Gå med i rum -->
+                        <div class="bg-emerald-50 border border-emerald-100 p-4 rounded-xl space-y-3">
+                            <h3 class="font-bold text-emerald-900 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-right-to-bracket"></i> Gå med i Rum
+                            </h3>
+                            <input type="text" id="join-room-code" placeholder="Klistra in rumskod..." class="w-full px-3 py-1.5 bg-white border border-emerald-300 rounded-lg text-xs uppercase tracking-wider font-mono focus:outline-none">
+                            <button onclick="joinOnlineRoom()" class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-xs shadow transition">
+                                Anslut till Rum
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Väntrum (När man skapat eller väntar) -->
+                <div id="waiting-room" class="hidden max-w-md mx-auto bg-amber-50 border border-amber-200 p-6 rounded-2xl text-center space-y-4">
+                    <div class="inline-block p-3 bg-amber-100 text-amber-600 rounded-full text-xl pulse-active">
+                        <i class="fa-solid fa-spinner fa-spin"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-amber-900">Väntar på din motståndare...</h4>
+                        <p class="text-xs text-amber-700 mt-1">Dela koden nedan för att starta spelet:</p>
+                    </div>
+                    <div class="flex items-center justify-center gap-2">
+                        <span id="display-room-code" class="font-mono font-extrabold text-lg bg-white text-slate-800 px-4 py-2 border border-amber-300 rounded-xl select-all">------</span>
+                        <button onclick="copyRoomCode()" class="p-2.5 bg-white border border-amber-300 hover:bg-amber-100 text-amber-800 rounded-xl text-sm transition" title="Kopiera kod">
+                            <i class="fa-solid fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SPELSKÄRM (ONLINE/LOKAL 1v1) -->
+            <div id="vs-game-area" class="hidden space-y-4">
+                <div class="bg-amber-500 text-white p-4 rounded-2xl shadow-sm flex flex-wrap justify-between items-center gap-3">
+                    <div class="flex items-center gap-2">
+                        <span class="bg-amber-600 px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider" id="game-mode-badge">Online Match</span>
+                        <p class="text-xs text-amber-100">Först tillflest rätt vinner!</p>
+                    </div>
+                    <button onclick="exitVersusGame()" class="bg-amber-600 hover:bg-amber-700 text-xs text-white px-3 py-1.5 rounded-lg transition border border-amber-400 font-medium">
+                        <i class="fa-solid fa-door-open mr-1"></i> Lämna match
+                    </button>
+                </div>
+
+                <!-- Poängställning -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div id="p1-score-box" class="bg-white border-2 border-indigo-500 rounded-xl p-3 text-center transition-all shadow-sm">
+                        <span id="p1-name" class="text-xs font-bold text-indigo-600 block uppercase truncate">Du</span>
+                        <span id="p1-score" class="text-3xl font-black text-slate-800">0</span>
+                        <span id="p1-turn-indicator" class="text-[10px] bg-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded-full mt-1 inline-block">Svarar nu</span>
+                    </div>
+                    <div id="p2-score-box" class="bg-white border-2 border-slate-200 rounded-xl p-3 text-center transition-all shadow-sm opacity-60">
+                        <span id="p2-name" class="text-xs font-bold text-rose-600 block uppercase truncate">Motståndare</span>
+                        <span id="p2-score" class="text-3xl font-black text-slate-800">0</span>
+                        <span id="p2-turn-indicator" class="text-[10px] bg-rose-100 text-rose-700 font-bold px-2 py-0.5 rounded-full mt-1 inline-block hidden">Väntar...</span>
+                    </div>
+                </div>
+
+                <!-- Frågeruta -->
+                <div id="versus-quiz-card" class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
+                    <div>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Vilket begrepp matchar förklaringen?</span>
+                        <p id="vs-desc" class="text-lg font-medium text-slate-800 leading-snug">Laddar fråga...</p>
+                    </div>
+
+                    <!-- Svarsalternativ (4 knappar) -->
+                    <div id="vs-options" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <!-- Fylls i dynamiskt -->
+                    </div>
+
+                    <div id="vs-waiting-msg" class="hidden text-center py-4 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 font-medium text-sm">
+                        <i class="fa-solid fa-spinner fa-spin mr-2"></i> Motståndaren gör sitt drag...
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. FÖRHÖRSKOMPIS (2 spelare - Muntligt förhör) -->
+        <section id="sec-quiz-2player" class="tab-content hidden space-y-4">
+            <div class="bg-indigo-900 text-white p-4 rounded-2xl shadow-sm flex flex-wrap justify-between items-center gap-3">
+                <div>
+                    <h2 class="font-bold text-lg"><i class="fa-solid fa-user-ninja mr-2 text-indigo-300"></i>Förhörsläge (Två personer)</h2>
+                    <p class="text-xs text-indigo-200">En håller skärmen (förhörsledare) – den andra svarar muntligt!</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="resetPartnerQuiz()" class="bg-indigo-800 hover:bg-indigo-700 text-xs text-indigo-100 px-3 py-1.5 rounded-lg transition border border-indigo-700">
+                        <i class="fa-solid fa-rotate-right mr-1"></i> Starta om
+                    </button>
+                </div>
+            </div>
+
+            <div id="partner-quiz-card" class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm text-center space-y-6">
+                <!-- Status -->
+                <div class="flex justify-between items-center text-xs font-semibold text-slate-500 border-b border-slate-100 pb-3">
+                    <span id="pq-chapter-tag" class="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full">Kapitel 1</span>
+                    <span id="pq-progress">Kort 1 av 20</span>
+                    <span id="pq-score" class="text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full"><i class="fa-solid fa-check mr-1"></i>0 Rätta</span>
+                </div>
+
+                <!-- Fråga / Begrepp -->
+                <div class="py-6">
+                    <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider block mb-2">Förhörsledaren frågar: "Vad betyder..."</span>
+                    <h3 id="pq-word" class="text-3xl font-extrabold text-slate-800 tracking-tight">Källkritik</h3>
+                </div>
+
+                <!-- Döljbar förklaring / Facit -->
+                <div id="pq-answer-box" class="hidden bg-slate-50 border border-slate-200 rounded-xl p-5 text-left text-slate-700 text-base leading-relaxed transition-all">
+                    <p class="text-xs font-bold text-slate-400 uppercase mb-1">Rätt svar (Facit):</p>
+                    <p id="pq-answer-text">Granska och analysera information för att avgöra om den är trovärdig.</p>
+                </div>
+
+                <!-- Kontroller -->
+                <div id="pq-controls-reveal">
+                    <button onclick="revealPartnerAnswer()" class="w-full sm:w-auto px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-md transition">
+                        <i class="fa-solid fa-eye mr-2"></i>Visa Facit
+                    </button>
+                </div>
+
+                <div id="pq-controls-judge" class="hidden flex justify-center gap-4">
+                    <button onclick="judgePartnerAnswer(false)" class="flex-1 max-w-xs py-3 bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold rounded-xl transition flex items-center justify-center gap-2 border border-rose-200">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                        <span>Fel Svar</span>
+                    </button>
+                    <button onclick="judgePartnerAnswer(true)" class="flex-1 max-w-xs py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-md">
+                        <i class="fa-solid fa-check text-lg"></i>
+                        <span>Rätt Svar!</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Resultatskärm när alla ord är klara -->
+            <div id="pq-results" class="hidden bg-white border border-slate-200 rounded-2xl p-8 text-center space-y-4 shadow-sm">
+                <div class="text-5xl text-amber-400 mb-2">🏆</div>
+                <h3 class="text-2xl font-bold text-slate-800">Bra jobbat! Omgången är klar.</h3>
+                <p class="text-slate-600">Ni fick <span id="pq-final-score" class="font-bold text-indigo-600 text-xl">0</span> rätt av <span id="pq-final-total" class="font-bold text-slate-800">0</span> möjliga!</p>
+                <button onclick="resetPartnerQuiz()" class="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold shadow hover:bg-indigo-700 transition">
+                    Förhör igen
+                </button>
+            </div>
+        </section>
+
+        <!-- 3. FLASHCARDS (Studiekort) -->
+        <section id="sec-flashcards" class="tab-content hidden space-y-4">
+            <div class="flex justify-between items-center text-slate-600 text-sm">
+                <span id="card-counter" class="font-medium bg-slate-200 text-slate-700 px-3 py-1 rounded-full text-xs">Kort 1 / 20</span>
+                <button onclick="shuffleCards()" class="text-indigo-600 hover:text-indigo-800 font-semibold text-xs flex items-center gap-1">
+                    <i class="fa-solid fa-shuffle"></i> Slumpa ordningen
+                </button>
+            </div>
+
+            <!-- Flip Card -->
+            <div class="perspective-1000 w-full h-80 cursor-pointer group" onclick="flipCard()">
+                <div id="flashcard-inner" class="relative w-full h-full transform-style-3d transition-transform duration-500 rounded-2xl shadow-md border border-slate-200 bg-white">
+                    <!-- Framsida (Ord) -->
+                    <div class="absolute inset-0 backface-hidden flex flex-col justify-between p-8 text-center bg-white rounded-2xl">
+                        <div class="flex justify-between items-center">
+                            <span id="fc-chapter-badge" class="text-xs font-bold bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded-md">Kapitel 1</span>
+                            <span class="text-xs text-slate-400"><i class="fa-solid fa-hand-pointer mr-1"></i>Klicka för svar</span>
+                        </div>
+                        <div class="my-auto">
+                            <h2 id="fc-word" class="text-3xl sm:text-4xl font-extrabold text-slate-800 tracking-tight">Källkritik</h2>
+                        </div>
+                        <div class="text-xs text-slate-400">Pluggkompis Studiekort</div>
+                    </div>
+
+                    <!-- Baksida (Förklaring) -->
+                    <div class="absolute inset-0 backface-hidden rotate-y-180 flex flex-col justify-between p-8 bg-indigo-900 text-white rounded-2xl">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold bg-indigo-800 text-indigo-200 px-2.5 py-1 rounded-md">Förklaring</span>
+                            <span class="text-xs text-indigo-300"><i class="fa-solid fa-rotate-left mr-1"></i>Klicka för ord</span>
+                        </div>
+                        <div class="my-auto">
+                            <p id="fc-desc" class="text-lg sm:text-xl font-medium leading-relaxed text-indigo-50">Granska och analysera information för att avgöra om den är trovärdig.</p>
+                        </div>
+                        <div class="text-xs text-indigo-300">Kom ihåg detta till provet!</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigeringsknappar -->
+            <div class="flex justify-between items-center pt-2">
+                <button onclick="prevCard()" class="px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm shadow-sm transition flex items-center gap-2">
+                    <i class="fa-solid fa-arrow-left"></i> Föregående
+                </button>
+                <button onclick="nextCard()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow-sm transition flex items-center gap-2">
+                    Nästa <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- 4. ORDLISTA (Översikt) -->
+        <section id="sec-wordlist" class="tab-content hidden space-y-4">
+            <!-- Sök & Filter -->
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-400"></i>
+                <input type="text" id="search-input" onkeyup="filterWordlist()" placeholder="Sök efter ord eller förklaring..." class="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+            </div>
+
+            <!-- Listan -->
+            <div id="wordlist-container" class="space-y-3">
+                <!-- Genereras dynamiskt -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
+        <p>Pluggkompis — Det enkla sättet att förhöra varandra inför provet 🚀</p>
+    </footer>
+
+    <!-- JAVASCRIPT LOGIK -->
+    <script>
+        // FULLSTÄNDIG DATAMODELL (Ord och förklaringar)
+        const vocabulary = [
+            // Kapitel 1: Medier & Kommunikation
+            { chapter: 1, word: "Information", desc: "Kunskap och meddelanden som överförs till tal, skrift, bilder, koder och symboler." },
+            { chapter: 1, word: "Medier", desc: "Kanal eller verktyg att sprida information, nyheter och underhållning till många människor samtidigt." },
+            { chapter: 1, word: "Traditionella medier", desc: "Tidningar, radio, tv, bio, musikproduktion." },
+            { chapter: 1, word: "Källkritik", desc: "Granska och analysera information för att avgöra om den är trovärdig." },
+            { chapter: 1, word: "Informationssamhälle", desc: "IT-samhälle eller postindustriella samhället." },
+            { chapter: 1, word: "Digitalisering", desc: "Man integrerar digital teknik i verksamheter och sociala processer." },
+            { chapter: 1, word: "Maktkoncentration", desc: "När makt och inflytande samlas hos en liten grupp eller några få företag." },
+            { chapter: 1, word: "Kommunikation", desc: "När tankar, information, känslor eller åsikter överförs mellan sändare och mottagare." },
+            { chapter: 1, word: "Masskommunikation", desc: "En tv-sändning eller en blogg når många människor." },
+            { chapter: 1, word: "Massmedier", desc: "Dagstidningar, tv, radio kommunicerar med ofta flera miljoner människor." },
+            { chapter: 1, word: "Sociala medier", desc: "Webbplatser och appar där man får information men också kan själv delta." },
+            { chapter: 1, word: "Opartisk", desc: "Man tar inte ställning för någon sida i en konflikt, tvist eller diskussion. Man är neutral." },
+            { chapter: 1, word: "Integrera", desc: "Samspela, umgås." },
+            { chapter: 1, word: "Mediestöd", desc: "Ekonomisk hjälp från staten till tidningar." },
+            { chapter: 1, word: "Nyhetsbyråer", desc: "Företag som specialiserat sig på att samla in och sälja information." },
+            { chapter: 1, word: "Tredje statsmakten", desc: "Benämning på massmedia." },
+            { chapter: 1, word: "Etermedier", desc: "Ett äldre samlingsnamn för radio och tv." },
+            { chapter: 1, word: "Public service", desc: "SVT och Sveriges radio. Oberoende och opartisk." },
+            { chapter: 1, word: "Reklam-TV", desc: "Finansieras enbart av reklamintäkter och sändningarna avbryts för reklam." },
+            { chapter: 1, word: "Streamingtjänst", desc: "En online-tjänst där man strömmar / tittar på filmer, sport utan att själv behöva ladda ner något." },
+
+            // Kapitel 2: Välfärd & Samhälle
+            { chapter: 2, word: "Välfärd", desc: "Människans sammanlagda levnadsförhållanden och välmående." },
+            { chapter: 2, word: "Socialt skyddsnät", desc: "Skydd för dem som har det svårt att klara sig. T.ex. bidrag, vård, stöd." },
+            { chapter: 2, word: "Välfärdsmodell", desc: "Beskriver hur ett land organiserar och finansierar sjukhus, skola, pension osv." },
+            { chapter: 2, word: "Standardtrygghet", desc: "Man ska behålla ungefär samma levnadsstandard även om man blir sjuk eller arbetslös." },
+            { chapter: 2, word: "Grundskydd", desc: "Vissa länder har ett grundskydd men man får bekosta försäkringar på egen hand." },
+            { chapter: 2, word: "Sociala rättigheter", desc: "Alla har samma värde." },
+            { chapter: 2, word: "Jämlikhet", desc: "Ingen ska behandlas sämre p.g.a. var man kommer ifrån, religion eller sexuell läggning." },
+            { chapter: 2, word: "Socialförsäkringar", desc: "Pengar som betalas ut av staten. T.ex. pension, a-kassa." },
+            { chapter: 2, word: "Sociala avgifter", desc: "Lagstadgade avgifter för att finansiera socialförsäkringar och trygghetssystemet." },
+            { chapter: 2, word: "A-kassa", desc: "Tillfällig socialförsäkring om man blir arbetslös." },
+            { chapter: 2, word: "Försörjningsstöd", desc: "Ekonomisk hjälp från kommunen." },
+            { chapter: 2, word: "Välfärdstjänster", desc: "Tjänster som betalas ut helt eller delvis med skattepengar. Som skola, omsorg, sjukvård." },
+            { chapter: 2, word: "Pension", desc: "En socialförsäkring man får när man jobbat klart i livet. Finansieras med arbetsgivaravgifter under åren du jobbat." },
+            { chapter: 2, word: "Offentlig sektor", desc: "Skola, sjukvård som bedrivs av stat, kommun, och landsting (regioner)." }
+        ];
+
+        // Global State
+        let currentChapter = 'all'; 
+        let filteredWords = [...vocabulary];
+
+        // Studiekort State
+        let fcIndex = 0;
+        let isFlipped = false;
+
+        // Förhörskompis State
+        let pqIndex = 0;
+        let pqScore = 0;
+        let pqList = [];
+
+        // VERSUS & MULTIPLAYER STATE
+        let isOnlineMode = false;
+        let isHost = false;
+        let peer = null;
+        let conn = null;
+        let myUsername = "Spelare 1";
+        let opponentUsername = "Spelare 2";
+        let roomCode = "";
+
+        let vsList = [];
+        let vsIndex = 0;
+        let p1Score = 0; // Host / Local Player 1
+        let p2Score = 0; // Guest / Local Player 2
+        let currentPlayer = 1; // Turn (1 or 2)
+
+        // INIT
+        window.onload = function() {
+            setChapter('all');
+            renderWordlist();
+        };
+
+        // Byt Flik
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.className = "tab-btn flex flex-col sm:flex-row items-center justify-center gap-2 p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition shadow-sm font-medium text-sm text-slate-600";
+            });
+
+            document.getElementById('sec-' + tabId).classList.remove('hidden');
+            const activeBtn = document.getElementById('tab-' + tabId);
+            activeBtn.className = "tab-btn flex flex-col sm:flex-row items-center justify-center gap-2 p-3 rounded-xl border border-indigo-600 bg-indigo-50 font-semibold text-indigo-900 shadow-sm text-sm";
+
+            if(tabId === 'quiz-2player') resetPartnerQuiz();
+            if(tabId === 'flashcards') updateFlashcard();
+        }
+
+        // Byt Kapitel
+        function setChapter(chap) {
+            currentChapter = chap;
+
+            ['all', 1, 2].forEach(c => {
+                const btn = document.getElementById('chapter-' + c);
+                if (c === chap) {
+                    btn.className = "px-3 py-1.5 rounded-lg transition-all bg-white text-indigo-900 shadow-sm font-semibold";
+                } else {
+                    btn.className = "px-3 py-1.5 rounded-lg transition-all text-indigo-100 hover:text-white";
+                }
+            });
+
+            filteredWords = chap === 'all' ? [...vocabulary] : vocabulary.filter(w => w.chapter === chap);
+
+            fcIndex = 0;
+            updateFlashcard();
+            resetPartnerQuiz();
+            renderWordlist();
+
+            // Om vi är i en aktiv match, starta om
+            if (!document.getElementById('vs-game-area').classList.contains('hidden') && !isOnlineMode) {
+                startLocalVersusGame();
+            }
+        }
+
+        /* ==========================================================================
+           ONLINE MULTIPLAYER & LOCAL VERSUS LOGIC (PeerJS WebRTC)
+           ========================================================================== */
+
+        function getUsername() {
+            const input = document.getElementById('username-input').value.trim();
+            return input !== "" ? input : "Elev" + Math.floor(Math.random() * 900 + 100);
+        }
+
+        function setupOnlineMode() {
+            myUsername = getUsername();
+            document.getElementById('username-input').value = myUsername;
+            document.getElementById('online-setup').classList.remove('hidden');
+        }
+
+        // 1. Skapa Rum (Host)
+        function createOnlineRoom() {
+            myUsername = getUsername();
+            isHost = true;
+            isOnlineMode = true;
+
+            // Generera slumpmässig rumskod (6 tecken)
+            roomCode = 'PK-' + Math.random().toString(36).substring(2, 7).toUpperCase();
+
+            // Initiera PeerJS
+            peer = new Peer(roomCode);
+
+            document.getElementById('waiting-room').classList.remove('hidden');
+            document.getElementById('display-room-code').innerText = roomCode;
+
+            peer.on('open', (id) => {
+                console.log('Rum skapat med ID:', id);
+            });
+
+            peer.on('connection', (connection) => {
+                conn = connection;
+                setupPeerEvents();
+            });
+
+            peer.on('error', (err) => {
+                alert("Kunde inte skapa rum. Försök igen! " + err.type);
+            });
+        }
+
+        // 2. Gå med i Rum (Guest)
+        function joinOnlineRoom() {
+            const codeInput = document.getElementById('join-room-code').value.trim().toUpperCase();
+            if(!codeInput) {
+                alert("Skriv in en giltig rumskod!");
+                return;
+            }
+
+            myUsername = getUsername();
+            isHost = false;
+            isOnlineMode = true;
+            roomCode = codeInput;
+
+            peer = new Peer();
+
+            peer.on('open', () => {
+                conn = peer.connect(roomCode);
+                setupPeerEvents();
+            });
+
+            peer.on('error', (err) => {
+                alert("Kunde inte ansluta till rummet. Kontrollera koden! " + err.type);
+            });
+        }
+
+        // Kopiera rumskod
+        function copyRoomCode() {
+            const text = document.getElementById('display-room-code').innerText;
+            const dummy = document.createElement("textarea");
+            document.body.appendChild(dummy);
+            dummy.value = text;
+            dummy.select();
+            document.execCommand("copy");
+            document.body.removeChild(dummy);
+            alert("Rumskod kopierad: " + text);
+        }
+
+        // Peer-händelser för datakommunikation
+        function setupPeerEvents() {
+            conn.on('open', () => {
+                // Skicka mitt användarnamn
+                conn.send({ type: 'JOIN', username: myUsername });
+
+                if (isHost) {
+                    // Host förbereder frågorna och skickar till gästen
+                    vsList = [...filteredWords].sort(() => Math.random() - 0.5);
+                    vsIndex = 0;
+                    p1Score = 0;
+                    p2Score = 0;
+                    currentPlayer = 1;
+
+                    // Skicka spelstart till gäst
+                    conn.send({
+                        type: 'START_GAME',
+                        vsList: vsList,
+                        hostUsername: myUsername
+                    });
+
+                    startOnlineVersusUI();
+                }
+            });
+
+            conn.on('data', (data) => {
+                if (data.type === 'JOIN' && isHost) {
+                    opponentUsername = data.username;
+                    // Skicka uppdaterat namn till gäst
+                    conn.send({ type: 'OPPONENT_NAME', username: myUsername });
+                    updateVersusUI();
+                }
+
+                if (data.type === 'OPPONENT_NAME') {
+                    opponentUsername = data.username;
+                    updateVersusUI();
+                }
+
+                if (data.type === 'START_GAME' && !isHost) {
+                    vsList = data.vsList;
+                    opponentUsername = data.hostUsername;
+                    vsIndex = 0;
+                    p1Score = 0;
+                    p2Score = 0;
+                    currentPlayer = 1;
+                    startOnlineVersusUI();
+                }
+
+                if (data.type === 'ANSWER') {
+                    // Ta emot poäng/drag från den andra spelaren
+                    p1Score = data.p1Score;
+                    p2Score = data.p2Score;
+                    vsIndex = data.vsIndex;
+                    currentPlayer = data.currentPlayer;
+
+                    updateVersusUI();
+                    showVersusQuestion();
+                }
+
+                if (data.type === 'RESTART' && !isHost) {
+                    vsList = data.vsList;
+                    vsIndex = 0;
+                    p1Score = 0;
+                    p2Score = 0;
+                    currentPlayer = 1;
+                    updateVersusUI();
+                    showVersusQuestion();
+                }
+            });
+
+            conn.on('close', () => {
+                alert("Motståndaren kopplade från.");
+                exitVersusGame();
+            });
+        }
+
+        function startOnlineVersusUI() {
+            document.getElementById('vs-lobby').classList.add('hidden');
+            document.getElementById('vs-game-area').classList.remove('hidden');
+            document.getElementById('game-mode-badge').innerText = "Online 1v1";
+            updateVersusUI();
+            showVersusQuestion();
+        }
+
+        // Starta Lokal 1v1 (Samma skärm)
+        function startLocalVersusGame() {
+            isOnlineMode = false;
+            myUsername = getUsername();
+            opponentUsername = "Spelare 2";
+
+            vsList = [...filteredWords].sort(() => Math.random() - 0.5);
+            vsIndex = 0;
+            p1Score = 0;
+            p2Score = 0;
+            currentPlayer = 1;
+
+            document.getElementById('vs-lobby').classList.add('hidden');
+            document.getElementById('vs-game-area').classList.remove('hidden');
+            document.getElementById('game-mode-badge').innerText = "Lokal 1v1";
+
+            updateVersusUI();
+            showVersusQuestion();
+        }
+
+        function exitVersusGame() {
+            if (peer) peer.destroy();
+            isOnlineMode = false;
+            document.getElementById('vs-lobby').classList.remove('hidden');
+            document.getElementById('online-setup').classList.add('hidden');
+            document.getElementById('waiting-room').classList.add('hidden');
+            document.getElementById('vs-game-area').classList.add('hidden');
+        }
+
+        function updateVersusUI() {
+            document.getElementById('p1-score').innerText = p1Score;
+            document.getElementById('p2-score').innerText = p2Score;
+
+            if (isOnlineMode) {
+                document.getElementById('p1-name').innerText = isHost ? `${myUsername} (Du)` : `${opponentUsername}`;
+                document.getElementById('p2-name').innerText = isHost ? `${opponentUsername}` : `${myUsername} (Du)`;
+            } else {
+                document.getElementById('p1-name').innerText = myUsername;
+                document.getElementById('p2-name').innerText = opponentUsername;
+            }
+
+            const p1Box = document.getElementById('p1-score-box');
+            const p2Box = document.getElementById('p2-score-box');
+            const p1Turn = document.getElementById('p1-turn-indicator');
+            const p2Turn = document.getElementById('p2-turn-indicator');
+
+            if (currentPlayer === 1) {
+                p1Box.className = "bg-white border-2 border-indigo-500 rounded-xl p-3 text-center transition-all shadow-md";
+                p2Box.className = "bg-white border-2 border-slate-200 rounded-xl p-3 text-center transition-all opacity-50";
+                p1Turn.classList.remove('hidden');
+                p2Turn.classList.add('hidden');
+            } else {
+                p1Box.className = "bg-white border-2 border-slate-200 rounded-xl p-3 text-center transition-all opacity-50";
+                p2Box.className = "bg-white border-2 border-rose-500 rounded-xl p-3 text-center transition-all shadow-md";
+                p1Turn.classList.add('hidden');
+                p2Turn.classList.remove('hidden');
+            }
+        }
+
+        function showVersusQuestion() {
+            if (vsIndex >= vsList.length) {
+                // Spelet Slut
+                let name1 = isOnlineMode ? (isHost ? myUsername : opponentUsername) : myUsername;
+                let name2 = isOnlineMode ? (isHost ? opponentUsername : myUsername) : opponentUsername;
+
+                let winnerText = p1Score > p2Score ? `${name1} Vinner! 🎉` : (p2Score > p1Score ? `${name2} Vinner! 🎉` : "Det blev Oavgjort! 🤝");
+                
+                document.getElementById('vs-desc').innerText = `Spelet är slut! ${winnerText}`;
+                document.getElementById('vs-options').innerHTML = `
+                    <button onclick="restartVersusGame()" class="col-span-1 sm:col-span-2 py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl shadow transition">
+                        Spela Igen
+                    </button>
+                `;
+                document.getElementById('vs-waiting-msg').classList.add('hidden');
+                return;
+            }
+
+            const currentItem = vsList[vsIndex];
+            document.getElementById('vs-desc').innerText = `"${currentItem.desc}"`;
+
+            // Avgör om det är min tur
+            let isMyTurn = true;
+            if (isOnlineMode) {
+                isMyTurn = (isHost && currentPlayer === 1) || (!isHost && currentPlayer === 2);
+            }
+
+            const optionsContainer = document.getElementById('vs-options');
+            const waitingMsg = document.getElementById('vs-waiting-msg');
+
+            if (!isMyTurn) {
+                optionsContainer.classList.add('hidden');
+                waitingMsg.classList.remove('hidden');
+                return;
+            } else {
+                optionsContainer.classList.remove('hidden');
+                waitingMsg.classList.add('hidden');
+            }
+
+            // Generera 4 alternativ
+            let options = [currentItem];
+            let otherWords = vocabulary.filter(w => w.word !== currentItem.word);
+            otherWords.sort(() => Math.random() - 0.5);
+
+            for (let i = 0; i < 3 && i < otherWords.length; i++) {
+                options.push(otherWords[i]);
+            }
+            options.sort(() => Math.random() - 0.5);
+
+            optionsContainer.innerHTML = '';
+            options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "p-4 text-left border border-slate-200 rounded-xl font-semibold hover:border-indigo-500 hover:bg-indigo-50/50 transition duration-150 flex items-center justify-between bg-white shadow-sm";
+                btn.innerHTML = `<span>${opt.word}</span> <i class="fa-solid fa-chevron-right text-xs text-slate-300"></i>`;
+                btn.onclick = () => answerVersus(opt.word === currentItem.word);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function answerVersus(isCorrect) {
+            if (isCorrect) {
+                if (currentPlayer === 1) p1Score += 10;
+                else p2Score += 10;
+            }
+
+            currentPlayer = currentPlayer === 1 ? 2 : 1;
+            vsIndex++;
+
+            if (isOnlineMode && conn) {
+                // Skicka uppdaterat spel-state till motståndaren
+                conn.send({
+                    type: 'ANSWER',
+                    p1Score: p1Score,
+                    p2Score: p2Score,
+                    vsIndex: vsIndex,
+                    currentPlayer: currentPlayer
+                });
+            }
+
+            updateVersusUI();
+            showVersusQuestion();
+        }
+
+        function restartVersusGame() {
+            vsList = [...filteredWords].sort(() => Math.random() - 0.5);
+            vsIndex = 0;
+            p1Score = 0;
+            p2Score = 0;
+            currentPlayer = 1;
+
+            if (isOnlineMode && conn && isHost) {
+                conn.send({
+                    type: 'RESTART',
+                    vsList: vsList
+                });
+            }
+
+            updateVersusUI();
+            showVersusQuestion();
+        }
+
+        /* ==========================================================================
+           2. FÖRHÖRSKOMPIS LOGIK
+           ========================================================================== */
+        function resetPartnerQuiz() {
+            pqList = [...filteredWords].sort(() => Math.random() - 0.5);
+            pqIndex = 0;
+            pqScore = 0;
+            
+            document.getElementById('partner-quiz-card').classList.remove('hidden');
+            document.getElementById('pq-results').classList.add('hidden');
+            showPartnerQuestion();
+        }
+
+        function showPartnerQuestion() {
+            if (pqIndex >= pqList.length) {
+                document.getElementById('partner-quiz-card').classList.add('hidden');
+                document.getElementById('pq-results').classList.remove('hidden');
+                document.getElementById('pq-final-score').innerText = pqScore;
+                document.getElementById('pq-final-total').innerText = pqList.length;
+                return;
+            }
+
+            const item = pqList[pqIndex];
+            document.getElementById('pq-chapter-tag').innerText = `Kapitel ${item.chapter}`;
+            document.getElementById('pq-progress').innerText = `Kort ${pqIndex + 1} av ${pqList.length}`;
+            document.getElementById('pq-score').innerHTML = `<i class="fa-solid fa-check mr-1"></i>${pqScore} Rätta`;
+
+            document.getElementById('pq-word').innerText = item.word;
+            document.getElementById('pq-answer-text').innerText = item.desc;
+
+            document.getElementById('pq-answer-box').classList.add('hidden');
+            document.getElementById('pq-controls-reveal').classList.remove('hidden');
+            document.getElementById('pq-controls-judge').classList.add('hidden');
+        }
+
+        function revealPartnerAnswer() {
+            document.getElementById('pq-answer-box').classList.remove('hidden');
+            document.getElementById('pq-controls-reveal').classList.add('hidden');
+            document.getElementById('pq-controls-judge').classList.remove('hidden');
+        }
+
+        function judgePartnerAnswer(isCorrect) {
+            if (isCorrect) pqScore++;
+            pqIndex++;
+            showPartnerQuestion();
+        }
+
+        /* ==========================================================================
+           3. FLASHCARDS LOGIK
+           ========================================================================== */
+        function flipCard() {
+            isFlipped = !isFlipped;
+            const cardInner = document.getElementById('flashcard-inner');
+            if (isFlipped) cardInner.classList.add('rotate-y-180');
+            else cardInner.classList.remove('rotate-y-180');
+        }
+
+        function updateFlashcard() {
+            if (filteredWords.length === 0) return;
+            isFlipped = false;
+            document.getElementById('flashcard-inner').classList.remove('rotate-y-180');
+
+            const item = filteredWords[fcIndex];
+            document.getElementById('fc-word').innerText = item.word;
+            document.getElementById('fc-desc').innerText = item.desc;
+            document.getElementById('fc-chapter-badge').innerText = `Kapitel ${item.chapter}`;
+            document.getElementById('card-counter').innerText = `Kort ${fcIndex + 1} / ${filteredWords.length}`;
+        }
+
+        function nextCard() {
+            fcIndex = (fcIndex < filteredWords.length - 1) ? fcIndex + 1 : 0;
+            updateFlashcard();
+        }
+
+        function prevCard() {
+            if (fcIndex > 0) {
+                fcIndex--;
+                updateFlashcard();
+            }
+        }
+
+        function shuffleCards() {
+            filteredWords.sort(() => Math.random() - 0.5);
+            fcIndex = 0;
+            updateFlashcard();
+        }
+
+        /* ==========================================================================
+           4. ORDLISTA LOGIK
+           ========================================================================== */
+        function renderWordlist() {
+            const container = document.getElementById('wordlist-container');
+            container.innerHTML = '';
+
+            filteredWords.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1 hover:border-slate-300 transition";
+                card.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <h4 class="font-bold text-indigo-900 text-base">${item.word}</h4>
+                        <span class="text-[10px] font-semibold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">Kap ${item.chapter}</span>
+                    </div>
+                    <p class="text-sm text-slate-600 leading-relaxed">${item.desc}</p>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function filterWordlist() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const cards = document.getElementById('wordlist-container').children;
+
+            Array.from(cards).forEach(card => {
+                const text = card.innerText.toLowerCase();
+                card.classList.toggle('hidden', !text.includes(query));
+            });
+        }
+    </script>
+</body>
+</html>
