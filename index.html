@@ -1,746 +1,275 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pluggkompis - Förhörs- & Studieverktyg</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- PeerJS för Online Multiplayer utan server -->
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-        .perspective-1000 { perspective: 1000px; }
-        .transform-style-3d { transform-style: preserve-3d; }
-        .backface-hidden { backface-visibility: hidden; }
-        .rotate-y-180 { transform: rotateY(180deg); }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pluggkompis</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<style>
+:root{--bg:#f5f6fb;--surf:#fff;--surf2:#eef0f8;--text:#161a2e;--mute:#6b7190;--line:#e2e5f1;--pri:#6366f1;--pri2:#8b5cf6;--ok:#10b981;--bad:#f43f5e;--amb:#f59e0b;--sh:0 8px 30px rgba(60,60,120,.08);--r:20px;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d0f1c;--surf:#171a2e;--surf2:#1f2340;--text:#eef0ff;--mute:#9298bb;--line:#2a2f52;--sh:0 8px 30px rgba(0,0,0,.4)}}
+:root[data-theme="dark"]{--bg:#0d0f1c;--surf:#171a2e;--surf2:#1f2340;--text:#eef0ff;--mute:#9298bb;--line:#2a2f52;--sh:0 8px 30px rgba(0,0,0,.4)}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
+background-image:radial-gradient(600px 300px at 10% -5%,rgba(99,102,241,.18),transparent),radial-gradient(500px 300px at 95% 0,rgba(139,92,246,.15),transparent);background-attachment:fixed}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+.wrap{max-width:760px;margin:0 auto;padding:16px}
+header{display:flex;align-items:center;justify-content:space-between;padding:6px 0 18px}
+.logo{display:flex;gap:12px;align-items:center}
+.logo i{font-style:normal;display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,var(--pri),var(--pri2));font-size:22px;box-shadow:0 6px 18px rgba(99,102,241,.4)}
+.logo b{font-size:20px;font-weight:800;letter-spacing:-.02em;display:block}.logo small{color:var(--mute);font-size:12px}
+.btn{padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;transition:transform .15s,box-shadow .2s,background .2s}
+.btn:active{transform:scale(.96)}
+.ghost{background:var(--surf);border:1px solid var(--line);box-shadow:var(--sh)}.ghost:hover{border-color:var(--pri)}
+.primary{background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff;box-shadow:0 6px 18px rgba(99,102,241,.35)}.primary:hover{box-shadow:0 8px 24px rgba(99,102,241,.5);transform:translateY(-1px)}
+.okb{background:var(--ok);color:#fff}.badb{background:rgba(244,63,94,.12);color:var(--bad)}
+nav{position:relative;display:grid;grid-template-columns:repeat(4,1fr);background:var(--surf);border:1px solid var(--line);border-radius:18px;padding:5px;box-shadow:var(--sh);margin-bottom:18px}
+nav button{position:relative;z-index:1;padding:10px 4px;border-radius:14px;font-size:12px;font-weight:600;color:var(--mute);display:flex;flex-direction:column;align-items:center;gap:2px;transition:color .25s}
+nav button span{font-size:18px}nav button.on{color:#fff}
+#pill{position:absolute;top:5px;bottom:5px;left:5px;width:calc(25% - 2.5px);border-radius:14px;background:linear-gradient(135deg,var(--pri),var(--pri2));transition:transform .35s cubic-bezier(.4,1.4,.5,1);box-shadow:0 4px 14px rgba(99,102,241,.4)}
+section{display:none;animation:in .35s ease both}section.on{display:block}
+@keyframes in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.card{background:var(--surf);border:1px solid var(--line);border-radius:var(--r);padding:24px;box-shadow:var(--sh)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.chip{font-size:12px;font-weight:600;padding:5px 12px;border-radius:99px;background:var(--surf2);color:var(--mute)}
+.chip.g{background:rgba(16,185,129,.14);color:var(--ok)}
+.bar{height:6px;border-radius:9px;background:var(--surf2);overflow:hidden;margin:14px 0 4px}.bar div{height:100%;width:0;background:linear-gradient(90deg,var(--pri),var(--pri2));transition:width .4s ease;border-radius:9px}
+.lbl{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--pri)}
+.big{font-size:clamp(28px,7vw,40px);font-weight:800;letter-spacing:-.03em;line-height:1.15}
+/* flashcard */
+.fc{perspective:1200px;height:320px;cursor:pointer;margin:14px 0}
+.fci{position:relative;width:100%;height:100%;transition:transform .6s cubic-bezier(.4,1.2,.4,1);transform-style:preserve-3d}
+.fci.flip{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:24px;padding:28px;display:flex;flex-direction:column;justify-content:space-between;text-align:center;box-shadow:var(--sh);border:1px solid var(--line)}
+.face .mid{margin:auto;overflow:auto;max-height:200px}
+.front{background:var(--surf)}.back{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;transform:rotateY(180deg);border:0}
+.face small{font-size:12px;opacity:.6}.back p{font-size:clamp(17px,4.5vw,22px);line-height:1.5;font-weight:500}
+.slide-l{animation:sl .3s ease}.slide-r{animation:sr .3s ease}
+@keyframes sl{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:none}}
+@keyframes sr{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
+.nav2{display:flex;gap:10px}.nav2 .btn{flex:1}
+/* quiz */
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+@media(max-width:520px){.opts{grid-template-columns:1fr}}
+.opt{padding:16px;border-radius:14px;border:2px solid var(--line);background:var(--surf);text-align:left;font-weight:600;transition:all .2s}
+.opt:hover:not(:disabled){border-color:var(--pri);transform:translateY(-2px);box-shadow:var(--sh)}
+.opt:disabled{cursor:default}.opt.dim{opacity:.45}
+.opt.right{border-color:var(--ok);background:rgba(16,185,129,.14);animation:pop .4s}
+.opt.wrong{border-color:var(--bad);background:rgba(244,63,94,.12);animation:shake .4s}
+@keyframes pop{50%{transform:scale(1.04)}}@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.score{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.pl{background:var(--surf);border:2px solid var(--line);border-radius:16px;padding:12px;text-align:center;transition:all .3s;opacity:.55}
+.pl.act{opacity:1;border-color:var(--pri);box-shadow:0 0 0 4px rgba(99,102,241,.15)}.pl.p2.act{border-color:var(--bad);box-shadow:0 0 0 4px rgba(244,63,94,.15)}
+.pl small{font-size:11px;font-weight:700;color:var(--mute);text-transform:uppercase;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl b{font-size:32px;font-weight:800;display:block;transition:transform .3s}.pl b.bump{transform:scale(1.35)}
+.seg{display:inline-flex;background:var(--surf2);border-radius:12px;padding:3px;margin-bottom:14px}
+.seg button{padding:8px 16px;border-radius:10px;font-size:13px;font-weight:600;color:var(--mute);transition:all .2s}.seg button.on{background:var(--surf);color:var(--text);box-shadow:var(--sh)}
+input,textarea{font:inherit;width:100%;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surf2);color:var(--text);outline:0;transition:border .2s,box-shadow .2s}
+input:focus,textarea:focus{border-color:var(--pri);box-shadow:0 0 0 4px rgba(99,102,241,.15)}
+textarea{font-family:ui-monospace,monospace;font-size:13px;resize:vertical}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}@media(max-width:520px){.grid2{grid-template-columns:1fr}}
+.box{background:var(--surf2);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.hide{display:none!important}
+.ans{background:var(--surf2);border-radius:14px;padding:16px;text-align:left;margin-top:18px;animation:in .3s}
+.wl{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.wi{background:var(--surf);border:1px solid var(--line);border-radius:14px;padding:14px 16px;animation:in .3s both;transition:border .2s,transform .2s}.wi:hover{border-color:var(--pri);transform:translateX(3px)}
+.wi b{display:block;margin-bottom:3px}.wi p{color:var(--mute);font-size:14px;line-height:1.5}
+.center{text-align:center}.mt{margin-top:18px}
+#panel{margin-bottom:16px;animation:in .3s}
+#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,30px);background:var(--text);color:var(--bg);padding:12px 20px;border-radius:99px;font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:all .3s;z-index:99}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+canvas{position:fixed;inset:0;pointer-events:none;z-index:98}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
 </head>
-<body class="text-slate-800 min-h-screen flex flex-col justify-between">
-
-    <!-- Header / Navbar -->
-    <header class="bg-indigo-600 text-white shadow-md sticky top-0 z-50">
-        <div class="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
-            <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('flashcards')">
-                <div class="bg-white/20 p-2 rounded-lg text-xl">
-                    <i class="fa-solid fa-graduation-cap text-white"></i>
-                </div>
-                <div>
-                    <h1 class="font-bold text-lg leading-tight">Pluggkompis</h1>
-                    <p class="text-xs text-indigo-200">Träna & Förhöra inför prov</p>
-                </div>
-            </div>
-
-            <!-- Kapitel-väljare -->
-            <div class="flex items-center bg-indigo-700/60 p-1 rounded-xl text-xs sm:text-sm font-medium">
-                <button id="chapter-all" onclick="setChapter('all')" class="px-3 py-1.5 rounded-lg transition-all bg-white text-indigo-900 shadow-sm font-semibold">Alla</button>
-                <button id="chapter-1" onclick="setChapter(1)" class="px-3 py-1.5 rounded-lg transition-all text-indigo-100 hover:text-white">Kap 1: Medier</button>
-                <button id="chapter-2" onclick="setChapter(2)" class="px-3 py-1.5 rounded-lg transition-all text-indigo-100 hover:text-white">Kap 2: Välfärd</button>
-            </div>
-        </div>
-    </header>
-
-    <!-- Main Content Container -->
-    <main class="max-w-5xl mx-auto px-4 py-6 flex-grow w-full">
-
-        <!-- Navigation Tabs -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6">
-            <button onclick="switchTab('quiz-2player')" id="tab-quiz-2player" class="tab-btn flex flex-col sm:flex-row items-center justify-center gap-2 p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition shadow-sm font-medium text-sm text-slate-600">
-                <i class="fa-solid fa-users text-indigo-600 text-lg"></i>
-                <span>1. Förhörskompis</span>
-            </button>
-            <button onclick="switchTab('versus')" id="tab-versus" class="tab-btn flex flex-col sm:flex-row items-center justify-center gap-2 p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition shadow-sm font-medium text-sm text-slate-600">
-                <i class="fa-solid fa-gamepad text-amber-500 text-lg"></i>
-                <span>2. Snabbtest 1v1</span>
-            </button>
-            <button onclick="switchTab('flashcards')" id="tab-flashcards" class="tab-btn flex flex-col sm:flex-row items-center justify-center gap-2 p-3 rounded-xl border border-indigo-600 bg-indigo-50 font-semibold text-indigo-900 shadow-sm text-sm">
-                <i class="fa-solid fa-clone text-indigo-600 text-lg"></i>
-                <span>3. Studiekort</span>
-            </button>
-            <button onclick="switchTab('wordlist')" id="tab-wordlist" class="tab-btn flex flex-col sm:flex-row items-center justify-center gap-2 p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition shadow-sm font-medium text-sm text-slate-600">
-                <i class="fa-solid fa-book-open text-emerald-600 text-lg"></i>
-                <span>4. Ordlista</span>
-            </button>
-        </div>
-
-        <!-- 1. FÖRHÖRSKOMPIS (2 spelare - Muntligt förhör) -->
-        <section id="sec-quiz-2player" class="tab-content hidden space-y-4">
-            <div class="bg-indigo-900 text-white p-4 rounded-2xl shadow-sm flex flex-wrap justify-between items-center gap-3">
-                <div>
-                    <h2 class="font-bold text-lg"><i class="fa-solid fa-user-ninja mr-2 text-indigo-300"></i>Förhörsläge (Två personer)</h2>
-                    <p class="text-xs text-indigo-200">En håller skärmen (förhörsledare) – den andra svarar muntligt!</p>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="resetPartnerQuiz()" class="bg-indigo-800 hover:bg-indigo-700 text-xs text-indigo-100 px-3 py-1.5 rounded-lg transition border border-indigo-700">
-                        <i class="fa-solid fa-rotate-right mr-1"></i> Starta om
-                    </button>
-                </div>
-            </div>
-
-            <div id="partner-quiz-card" class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm text-center space-y-6">
-                <div class="flex justify-between items-center text-xs font-semibold text-slate-500 border-b border-slate-100 pb-3">
-                    <span id="pq-chapter-tag" class="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full">Kapitel 1</span>
-                    <span id="pq-progress">Kort 1 av 20</span>
-                    <span id="pq-score" class="text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full"><i class="fa-solid fa-check mr-1"></i>0 Rätta</span>
-                </div>
-
-                <div class="py-6">
-                    <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider block mb-2">Förhörsledaren frågar: "Vad betyder..."</span>
-                    <h3 id="pq-word" class="text-3xl font-extrabold text-slate-800 tracking-tight">Källkritik</h3>
-                </div>
-
-                <div id="pq-answer-box" class="hidden bg-slate-50 border border-slate-200 rounded-xl p-5 text-left text-slate-700 text-base leading-relaxed transition-all">
-                    <p class="text-xs font-bold text-slate-400 uppercase mb-1">Rätt svar (Facit):</p>
-                    <p id="pq-answer-text">Granska och analysera information för att avgöra om den är trovärdig.</p>
-                </div>
-
-                <div id="pq-controls-reveal">
-                    <button onclick="revealPartnerAnswer()" class="w-full sm:w-auto px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-md transition">
-                        <i class="fa-solid fa-eye mr-2"></i>Visa Facit
-                    </button>
-                </div>
-
-                <div id="pq-controls-judge" class="hidden flex justify-center gap-4">
-                    <button onclick="judgePartnerAnswer(false)" class="flex-1 max-w-xs py-3 bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold rounded-xl transition flex items-center justify-center gap-2 border border-rose-200">
-                        <i class="fa-solid fa-xmark text-lg"></i>
-                        <span>Fel Svar</span>
-                    </button>
-                    <button onclick="judgePartnerAnswer(true)" class="flex-1 max-w-xs py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition flex items-center justify-center gap-2 shadow-md">
-                        <i class="fa-solid fa-check text-lg"></i>
-                        <span>Rätt Svar!</span>
-                    </button>
-                </div>
-            </div>
-
-            <div id="pq-results" class="hidden bg-white border border-slate-200 rounded-2xl p-8 text-center space-y-4 shadow-sm">
-                <div class="text-5xl text-amber-400 mb-2">🏆</div>
-                <h3 class="text-2xl font-bold text-slate-800">Bra jobbat! Omgången är klar.</h3>
-                <p class="text-slate-600">Ni fick <span id="pq-final-score" class="font-bold text-indigo-600 text-xl">0</span> rätt av <span id="pq-final-total" class="font-bold text-slate-800">0</span> möjligen!</p>
-                <button onclick="resetPartnerQuiz()" class="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold shadow hover:bg-indigo-700 transition">
-                    Förhör igen
-                </button>
-            </div>
-        </section>
-
-        <!-- 2. SNABBTEST 1v1 (Lokal & Online) -->
-        <section id="sec-versus" class="tab-content hidden space-y-4">
-            <!-- Mode Switcher -->
-            <div class="bg-amber-500 text-white p-4 rounded-2xl shadow-sm flex flex-wrap justify-between items-center gap-3">
-                <div>
-                    <h2 class="font-bold text-lg"><i class="fa-solid fa-bolt mr-2 text-amber-200"></i>Snabbtest 1v1</h2>
-                    <p class="text-xs text-amber-100">Tävla på samma enhet eller spela online över internet!</p>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button id="mode-btn-local" onclick="setVersusMode('local')" class="bg-white text-amber-900 text-xs px-3 py-1.5 rounded-lg transition font-semibold shadow-sm">
-                        Lokal 1v1
-                    </button>
-                    <button id="mode-btn-online" onclick="setVersusMode('online')" class="bg-amber-700 hover:bg-amber-800 text-xs text-amber-100 px-3 py-1.5 rounded-lg transition font-medium">
-                        Online 1v1
-                    </button>
-                </div>
-            </div>
-
-            <!-- ONLINE SETUP PANEL -->
-            <div id="online-setup-panel" class="hidden bg-white border border-amber-200 rounded-2xl p-6 shadow-sm space-y-4">
-                <h3 class="font-bold text-slate-800 text-lg border-b pb-2"><i class="fa-solid fa-globe text-amber-500 mr-2"></i>Online Multiplayer</h3>
-                
-                <div class="space-y-3">
-                    <label class="block text-xs font-bold text-slate-600 uppercase">1. Skriv ditt användarnamn:</label>
-                    <input type="text" id="username-input" placeholder="T.ex. Elev1" class="w-full max-w-xs p-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                    <!-- Skapa rum -->
-                    <div class="p-4 border border-slate-200 rounded-xl bg-slate-50 space-y-3">
-                        <span class="font-bold text-sm text-slate-700 block">Skapa ett nytt rum</span>
-                        <button onclick="createOnlineRoom()" class="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-xl text-sm shadow transition">
-                            Generera Rumskod
-                        </button>
-                        <div id="host-room-info" class="hidden space-y-2 pt-2 border-t border-slate-200">
-                            <p class="text-xs text-slate-500">Skicka denna kod till din kompis:</p>
-                            <div class="flex items-center gap-2">
-                                <input type="text" id="generated-code-display" readonly class="p-2 bg-white border border-slate-300 rounded-lg text-sm font-mono font-bold w-full text-center">
-                                <button onclick="copyRoomCode()" class="px-3 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg text-xs font-semibold">Kopiera</button>
-                            </div>
-                            <p id="host-status" class="text-xs text-amber-600 font-medium text-center animate-pulse">Väntar på motståndare...</p>
-                        </div>
-                    </div>
-
-                    <!-- Gå med i rum -->
-                    <div class="p-4 border border-slate-200 rounded-xl bg-slate-50 space-y-3">
-                        <span class="font-bold text-sm text-slate-700 block">Gå med i ett rum</span>
-                        <input type="text" id="join-code-input" placeholder="Klistra in rumskod här..." class="w-full p-2.5 border border-slate-300 rounded-xl text-sm font-mono focus:ring-2 focus:ring-amber-500 focus:outline-none">
-                        <button onclick="joinOnlineRoom()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-sm shadow transition">
-                            Anslut till rum
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Poängställning -->
-            <div class="grid grid-cols-2 gap-4">
-                <div id="p1-score-box" class="bg-white border-2 border-indigo-500 rounded-xl p-3 text-center transition-all shadow-sm">
-                    <span id="p1-name" class="text-xs font-bold text-indigo-600 block uppercase">Spelare 1</span>
-                    <span id="p1-score" class="text-3xl font-black text-slate-800">0</span>
-                    <span id="p1-turn-indicator" class="text-[10px] bg-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded-full mt-1 inline-block">Din tur!</span>
-                </div>
-                <div id="p2-score-box" class="bg-white border-2 border-slate-200 rounded-xl p-3 text-center transition-all shadow-sm opacity-60">
-                    <span id="p2-name" class="text-xs font-bold text-rose-600 block uppercase">Spelare 2</span>
-                    <span id="p2-score" class="text-3xl font-black text-slate-800">0</span>
-                    <span id="p2-turn-indicator" class="text-[10px] bg-rose-100 text-rose-700 font-bold px-2 py-0.5 rounded-full mt-1 inline-block hidden">Din tur!</span>
-                </div>
-            </div>
-
-            <!-- Frågeruta -->
-            <div id="versus-quiz-card" class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
-                <div>
-                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">Vilket begrepp matchar förklaringen?</span>
-                    <p id="vs-desc" class="text-lg font-medium text-slate-800 leading-snug">Laddar fråga...</p>
-                </div>
-
-                <div id="vs-options" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <!-- Alternativ -->
-                </div>
-            </div>
-        </section>
-
-        <!-- 3. FLASHCARDS (Studiekort) -->
-        <section id="sec-flashcards" class="tab-content space-y-4">
-            <div class="flex justify-between items-center text-slate-600 text-sm">
-                <span id="card-counter" class="font-medium bg-slate-200 text-slate-700 px-3 py-1 rounded-full text-xs">Kort 1 / 20</span>
-                <button onclick="shuffleCards()" class="text-indigo-600 hover:text-indigo-800 font-semibold text-xs flex items-center gap-1">
-                    <i class="fa-solid fa-shuffle"></i> Slumpa ordningen
-                </button>
-            </div>
-
-            <div class="perspective-1000 w-full h-80 cursor-pointer group" onclick="flipCard()">
-                <div id="flashcard-inner" class="relative w-full h-full transform-style-3d transition-transform duration-500 rounded-2xl shadow-md border border-slate-200 bg-white">
-                    <div class="absolute inset-0 backface-hidden flex flex-col justify-between p-8 text-center bg-white rounded-2xl">
-                        <div class="flex justify-between items-center">
-                            <span id="fc-chapter-badge" class="text-xs font-bold bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded-md">Kapitel 1</span>
-                            <span class="text-xs text-slate-400"><i class="fa-solid fa-hand-pointer mr-1"></i>Klicka för svar</span>
-                        </div>
-                        <div class="my-auto">
-                            <h2 id="fc-word" class="text-3xl sm:text-4xl font-extrabold text-slate-800 tracking-tight">Källkritik</h2>
-                        </div>
-                        <div class="text-xs text-slate-400">Pluggkompis Studiekort</div>
-                    </div>
-
-                    <div class="absolute inset-0 backface-hidden rotate-y-180 flex flex-col justify-between p-8 bg-indigo-900 text-white rounded-2xl">
-                        <div class="flex justify-between items-center">
-                            <span class="text-xs font-bold bg-indigo-800 text-indigo-200 px-2.5 py-1 rounded-md">Förklaring</span>
-                            <span class="text-xs text-indigo-300"><i class="fa-solid fa-rotate-left mr-1"></i>Klicka för ord</span>
-                        </div>
-                        <div class="my-auto">
-                            <p id="fc-desc" class="text-lg sm:text-xl font-medium leading-relaxed text-indigo-50">Granska och analysera information för att avgöra om den är trovärdig.</p>
-                        </div>
-                        <div class="text-xs text-indigo-300">Kom ihåg detta till provet!</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex justify-between items-center pt-2">
-                <button onclick="prevCard()" class="px-5 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm shadow-sm transition flex items-center gap-2">
-                    <i class="fa-solid fa-arrow-left"></i> Föregående
-                </button>
-                <button onclick="nextCard()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm shadow-sm transition flex items-center gap-2">
-                    Nästa <i class="fa-solid fa-arrow-right"></i>
-                </button>
-            </div>
-        </section>
-
-        <!-- 4. ORDLISTA -->
-        <section id="sec-wordlist" class="tab-content hidden space-y-4">
-            <div class="relative">
-                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-slate-400"></i>
-                <input type="text" id="search-input" onkeyup="filterWordlist()" placeholder="Sök efter ord eller förklaring..." class="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
-            </div>
-
-            <div id="wordlist-container" class="space-y-3">
-                <!-- Genereras dynamiskt -->
-            </div>
-        </section>
-
-    </main>
-
-    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
-        <p>Pluggkompis — Det enkla sättet att förhöra varandra inför provet 🚀</p>
-    </footer>
-
-    <!-- JAVASCRIPT LOGIK -->
-    <script>
-        const vocabulary = [
-            { chapter: 1, word: "Information", desc: "Kunskap och meddelanden som överförs till tal, skrift, bilder, koder och symboler." },
-            { chapter: 1, word: "Medier", desc: "Kanal eller verktyg att sprida information, nyheter och underhållning till många människor samtidigt." },
-            { chapter: 1, word: "Traditionella medier", desc: "Tidningar, radio, tv, bio, musikproduktion." },
-            { chapter: 1, word: "Källkritik", desc: "Granska och analysera information för att avgöra om den är trovärdig." },
-            { chapter: 1, word: "Informationssamhälle", desc: "IT-samhälle eller postindustriella samhället." },
-            { chapter: 1, word: "Digitalisering", desc: "Man integrerar digital teknik i verksamheter och sociala processer." },
-            { chapter: 1, word: "Maktkoncentration", desc: "När makt och inflytande samlas hos en liten grupp eller några få företag." },
-            { chapter: 1, word: "Kommunikation", desc: "När tankar, information, känslor eller åsikter överförs mellan sändare och mottagare." },
-            { chapter: 1, word: "Masskommunikation", desc: "En tv-sändning eller en blogg når många människor." },
-            { chapter: 1, word: "Massmedier", desc: "Dagstidningar, tv, radio kommunicerar med ofta flera miljoner människor." },
-            { chapter: 1, word: "Sociala medier", desc: "Webbplatser och appar där man får information men också kan själv delta." },
-            { chapter: 1, word: "Opartisk", desc: "Man tar inte ställning för någon sida i en konflikt, tvist eller diskussion. Man är neutral." },
-            { chapter: 1, word: "Integrera", desc: "Samspela, umgås." },
-            { chapter: 1, word: "Mediestöd", desc: "Ekonomisk hjälp från staten till tidningar." },
-            { chapter: 1, word: "Nyhetsbyråer", desc: "Företag som specialiserat sig på att samla in och sälja information." },
-            { chapter: 1, word: "Tredje statsmakten", desc: "Benämning på massmedia." },
-            { chapter: 1, word: "Etermedier", desc: "Ett äldre samlingsnamn för radio och tv." },
-            { chapter: 1, word: "Public service", desc: "SVT och Sveriges radio. Oberoende och opartisk." },
-            { chapter: 1, word: "Reklam-TV", desc: "Finansieras enbart av reklamintäkter och sändningarna avbryts för reklam." },
-            { chapter: 1, word: "Streamingtjänst", desc: "En online-tjänst där man strömmar / tittar på filmer, sport utan att själv behöva ladda ner något." },
-            { chapter: 2, word: "Välfärd", desc: "Människans sammanlagda levnadsförhållanden och välmående." },
-            { chapter: 2, word: "Socialt skyddsnät", desc: "Skydd för dem som har det svårt att klara sig. T.ex. bidrag, vård, stöd." },
-            { chapter: 2, word: "Välfärdsmodell", desc: "Beskriver hur ett land organiserar och finansierar sjukhus, skola, pension osv." },
-            { chapter: 2, word: "Standardtrygghet", desc: "Man ska behålla ungefär samma levnadsstandard även om man blir sjuk eller arbetslös." },
-            { chapter: 2, word: "Grundskydd", desc: "Vissa länder har ett grundskydd men man får bekosta försäkringar på egen hand." },
-            { chapter: 2, word: "Sociala rättigheter", desc: "Alla har samma värde." },
-            { chapter: 2, word: "Jämlikhet", desc: "Ingen ska behandlas sämre p.g.a. var man kommer ifrån, religion eller sexuell läggning." },
-            { chapter: 2, word: "Socialförsäkringar", desc: "Pengar som betalas ut av staten. T.ex. pension, a-kassa." },
-            { chapter: 2, word: "Sociala avgifter", desc: "Lagstadgade avgifter för att finansiera socialförsäkringar och trygghetssystemet." },
-            { chapter: 2, word: "A-kassa", desc: "Tillfällig socialförsäkring om man blir arbetslös." },
-            { chapter: 2, word: "Försörjningsstöd", desc: "Ekonomisk hjälp från kommunen." },
-            { chapter: 2, word: "Välfärdstjänster", desc: "Tjänster som betalas ut helt eller delvis med skattepengar. Som skola, omsorg, sjukvård." },
-            { chapter: 2, word: "Pension", desc: "En socialförsäkring man får när man jobbat klart i livet. Finansieras med arbetsgivaravgifter under åren du jobbat." },
-            { chapter: 2, word: "Offentlig sektor", desc: "Skola, sjukvård som bedrivs av stat, kommun, och landsting (regioner)." }
-        ];
-
-        let currentChapter = 'all';
-        let filteredWords = [...vocabulary];
-
-        // Flashcard State
-        let fcIndex = 0;
-        let isFlipped = false;
-
-        // Partner Quiz State
-        let pqIndex = 0;
-        let pqScore = 0;
-        let pqList = [];
-
-        // Versus State
-        let vsList = [];
-        let vsIndex = 0;
-        let p1Score = 0;
-        let p2Score = 0;
-        let currentPlayer = 1;
-        let versusMode = 'local'; // 'local' or 'online'
-
-        // Online State
-        let peer = null;
-        let conn = null;
-        let myUsername = "Spelare";
-        let opponentUsername = "Motståndare";
-        let isHost = false;
-        let myRole = 1; // 1 or 2
-
-        window.onload = function() {
-            setChapter('all');
-            renderWordlist();
-        };
-
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.className = "tab-btn flex flex-col sm:flex-row items-center justify-center gap-2 p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition shadow-sm font-medium text-sm text-slate-600";
-            });
-
-            document.getElementById('sec-' + tabId).classList.remove('hidden');
-            const activeBtn = document.getElementById('tab-' + tabId);
-            activeBtn.className = "tab-btn flex flex-col sm:flex-row items-center justify-center gap-2 p-3 rounded-xl border border-indigo-600 bg-indigo-50 font-semibold text-indigo-900 shadow-sm text-sm";
-
-            if(tabId === 'quiz-2player') resetPartnerQuiz();
-            if(tabId === 'versus') startVersusGame();
-            if(tabId === 'flashcards') updateFlashcard();
-        }
-
-        function setChapter(chap) {
-            currentChapter = chap;
-
-            ['all', 1, 2].forEach(c => {
-                const btn = document.getElementById('chapter-' + c);
-                if (c === chap) {
-                    btn.className = "px-3 py-1.5 rounded-lg transition-all bg-white text-indigo-900 shadow-sm font-semibold";
-                } else {
-                    btn.className = "px-3 py-1.5 rounded-lg transition-all text-indigo-100 hover:text-white";
-                }
-            });
-
-            if (chap === 'all') {
-                filteredWords = [...vocabulary];
-            } else {
-                filteredWords = vocabulary.filter(w => w.chapter === chap);
-            }
-
-            fcIndex = 0;
-            updateFlashcard();
-            resetPartnerQuiz();
-            startVersusGame();
-            renderWordlist();
-        }
-
-        // --- 1. FÖRHÖRSKOMPIS LOGIK ---
-        function resetPartnerQuiz() {
-            pqList = [...filteredWords].sort(() => Math.random() - 0.5);
-            pqIndex = 0;
-            pqScore = 0;
-            document.getElementById('partner-quiz-card').classList.remove('hidden');
-            document.getElementById('pq-results').classList.add('hidden');
-            showPartnerQuestion();
-        }
-
-        function showPartnerQuestion() {
-            if (pqIndex >= pqList.length) {
-                document.getElementById('partner-quiz-card').classList.add('hidden');
-                document.getElementById('pq-results').classList.remove('hidden');
-                document.getElementById('pq-final-score').innerText = pqScore;
-                document.getElementById('pq-final-total').innerText = pqList.length;
-                return;
-            }
-
-            const item = pqList[pqIndex];
-            document.getElementById('pq-chapter-tag').innerText = `Kapitel ${item.chapter}`;
-            document.getElementById('pq-progress').innerText = `Kort ${pqIndex + 1} av ${pqList.length}`;
-            document.getElementById('pq-score').innerHTML = `<i class="fa-solid fa-check mr-1"></i>${pqScore} Rätta`;
-            document.getElementById('pq-word').innerText = item.word;
-            document.getElementById('pq-answer-text').innerText = item.desc;
-
-            document.getElementById('pq-answer-box').classList.add('hidden');
-            document.getElementById('pq-controls-reveal').classList.remove('hidden');
-            document.getElementById('pq-controls-judge').classList.add('hidden');
-        }
-
-        function revealPartnerAnswer() {
-            document.getElementById('pq-answer-box').classList.remove('hidden');
-            document.getElementById('pq-controls-reveal').classList.add('hidden');
-            document.getElementById('pq-controls-judge').classList.remove('hidden');
-        }
-
-        function judgePartnerAnswer(isCorrect) {
-            if (isCorrect) pqScore++;
-            pqIndex++;
-            showPartnerQuestion();
-        }
-
-        // --- 2. SNABBTEST 1v1 & ONLINE MULTIPLAYER ---
-        function setVersusMode(mode) {
-            versusMode = mode;
-            const btnLocal = document.getElementById('mode-btn-local');
-            const btnOnline = document.getElementById('mode-btn-online');
-            const onlinePanel = document.getElementById('online-setup-panel');
-
-            if (mode === 'local') {
-                btnLocal.className = "bg-white text-amber-900 text-xs px-3 py-1.5 rounded-lg transition font-semibold shadow-sm";
-                btnOnline.className = "bg-amber-700 hover:bg-amber-800 text-xs text-amber-100 px-3 py-1.5 rounded-lg transition font-medium";
-                onlinePanel.classList.add('hidden');
-                document.getElementById('p1-name').innerText = "Spelare 1";
-                document.getElementById('p2-name').innerText = "Spelare 2";
-                startVersusGame();
-            } else {
-                btnOnline.className = "bg-white text-amber-900 text-xs px-3 py-1.5 rounded-lg transition font-semibold shadow-sm";
-                btnLocal.className = "bg-amber-700 hover:bg-amber-800 text-xs text-amber-100 px-3 py-1.5 rounded-lg transition font-medium";
-                onlinePanel.classList.remove('hidden');
-            }
-        }
-
-        function startVersusGame() {
-            vsList = [...filteredWords].sort(() => Math.random() - 0.5);
-            vsIndex = 0;
-            p1Score = 0;
-            p2Score = 0;
-            currentPlayer = 1;
-
-            updateVersusUI();
-            showVersusQuestion();
-        }
-
-        function updateVersusUI() {
-            document.getElementById('p1-score').innerText = p1Score;
-            document.getElementById('p2-score').innerText = p2Score;
-
-            const p1Box = document.getElementById('p1-score-box');
-            const p2Box = document.getElementById('p2-score-box');
-            const p1Turn = document.getElementById('p1-turn-indicator');
-            const p2Turn = document.getElementById('p2-turn-indicator');
-
-            if (currentPlayer === 1) {
-                p1Box.className = "bg-white border-2 border-indigo-500 rounded-xl p-3 text-center transition-all shadow-md";
-                p2Box.className = "bg-white border-2 border-slate-200 rounded-xl p-3 text-center transition-all opacity-50";
-                p1Turn.classList.remove('hidden');
-                p2Turn.classList.add('hidden');
-            } else {
-                p1Box.className = "bg-white border-2 border-slate-200 rounded-xl p-3 text-center transition-all opacity-50";
-                p2Box.className = "bg-white border-2 border-rose-500 rounded-xl p-3 text-center transition-all shadow-md";
-                p1Turn.classList.add('hidden');
-                p2Turn.classList.remove('hidden');
-            }
-        }
-
-        function showVersusQuestion() {
-            if (vsIndex >= vsList.length) {
-                let p1N = versusMode === 'online' ? (isHost ? myUsername : opponentUsername) : "Spelare 1";
-                let p2N = versusMode === 'online' ? (!isHost ? myUsername : opponentUsername) : "Spelare 2";
-                
-                let winnerText = p1Score > p2Score ? `${p1N} Vinner! 🎉` : (p2Score > p1Score ? `${p2N} Vinner! 🎉` : "Det blev Oavgjort! 🤝");
-                document.getElementById('vs-desc').innerText = `Spelet är slut! ${winnerText}`;
-                document.getElementById('vs-options').innerHTML = `
-                    <button onclick="startVersusGame()" class="col-span-2 py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl shadow">
-                        Spela Igen
-                    </button>
-                `;
-                return;
-            }
-
-            const currentItem = vsList[vsIndex];
-            document.getElementById('vs-desc').innerText = `"${currentItem.desc}"`;
-
-            let options = [currentItem];
-            let otherWords = vocabulary.filter(w => w.word !== currentItem.word);
-            otherWords.sort(() => Math.random() - 0.5);
-
-            for (let i = 0; i < 3 && i < otherWords.length; i++) {
-                options.push(otherWords[i]);
-            }
-            options.sort(() => Math.random() - 0.5);
-
-            const optionsContainer = document.getElementById('vs-options');
-            optionsContainer.innerHTML = '';
-
-            options.forEach(opt => {
-                const btn = document.createElement('button');
-                btn.className = "p-4 text-left border border-slate-200 rounded-xl font-semibold hover:border-indigo-500 hover:bg-indigo-50/50 transition duration-150 flex items-center justify-between";
-                
-                // Om det är online-läge och inte din tur, inaktivera knappen
-                if (versusMode === 'online' && currentPlayer !== myRole) {
-                    btn.disabled = true;
-                    btn.classList.add('opacity-50', 'cursor-not-allowed');
-                }
-
-                btn.innerHTML = `<span>${opt.word}</span> <i class="fa-solid fa-chevron-right text-xs text-slate-300"></i>`;
-                btn.onclick = () => handleAnswerClick(opt.word === currentItem.word);
-                optionsContainer.appendChild(btn);
-            });
-        }
-
-        function handleAnswerClick(isCorrect) {
-            if (versusMode === 'online') {
-                if (currentPlayer !== myRole) return; // Inte din tur!
-                
-                // Skicka svaret till motståndaren
-                sendData({
-                    type: 'ANSWER',
-                    isCorrect: isCorrect
-                });
-            }
-
-            processAnswer(isCorrect);
-        }
-
-        function processAnswer(isCorrect) {
-            if (isCorrect) {
-                if (currentPlayer === 1) p1Score += 10;
-                else p2Score += 10;
-            }
-
-            currentPlayer = currentPlayer === 1 ? 2 : 1;
-            vsIndex++;
-            updateVersusUI();
-            showVersusQuestion();
-        }
-
-        // --- ONLINE MULTIPLAYER (PEERJS) ---
-        function getUsername() {
-            const val = document.getElementById('username-input').value.trim();
-            return val ? val : "Spelare_" + Math.floor(Math.random()*100);
-        }
-
-        function createOnlineRoom() {
-            myUsername = getUsername();
-            isHost = true;
-            myRole = 1;
-
-            const roomCode = 'PK-' + Math.random().toString(36).substring(2, 7).toUpperCase();
-            document.getElementById('generated-code-display').value = roomCode;
-            document.getElementById('host-room-info').classList.remove('hidden');
-
-            peer = new Peer(roomCode);
-
-            peer.on('open', (id) => {
-                console.log("Rum skapat med ID:", id);
-            });
-
-            peer.on('connection', (c) => {
-                conn = c;
-                setupConnection();
-            });
-
-            peer.on('error', (err) => {
-                alert("Fel vid skapande av rum: " + err);
-            });
-        }
-
-        function joinOnlineRoom() {
-            myUsername = getUsername();
-            isHost = false;
-            myRole = 2;
-
-            const roomCode = document.getElementById('join-code-input').value.trim().toUpperCase();
-            if (!roomCode) {
-                alert("Skriv in en rumskod!");
-                return;
-            }
-
-            peer = new Peer();
-
-            peer.on('open', () => {
-                conn = peer.connect(roomCode);
-                setupConnection();
-            });
-
-            peer.on('error', (err) => {
-                alert("Kunde inte ansluta. Kontrollera koden!");
-            });
-        }
-
-        function setupConnection() {
-            conn.on('open', () => {
-                // Skicka användarnamn
-                sendData({
-                    type: 'JOIN',
-                    username: myUsername
-                });
-
-                document.getElementById('online-setup-panel').classList.add('hidden');
-                alert("Ansluten! Spelet startar.");
-            });
-
-            conn.on('data', (data) => {
-                handleNetworkData(data);
-            });
-        }
-
-        function sendData(data) {
-            if (conn && conn.open) {
-                conn.send(data);
-            }
-        }
-
-        function handleNetworkData(data) {
-            if (data.type === 'JOIN') {
-                opponentUsername = data.username;
-                
-                if (isHost) {
-                    document.getElementById('p1-name').innerText = myUsername + " (Du)";
-                    document.getElementById('p2-name').innerText = opponentUsername;
-                    
-                    // Skicka bekräftelse och slumpad ordlista till gästen
-                    sendData({
-                        type: 'START',
-                        username: myUsername,
-                        list: vsList
-                    });
-                } else {
-                    document.getElementById('p1-name').innerText = opponentUsername;
-                    document.getElementById('p2-name').innerText = myUsername + " (Du)";
-                }
-                startVersusGame();
-            }
-
-            if (data.type === 'START') {
-                opponentUsername = data.username;
-                vsList = data.list;
-                document.getElementById('p1-name').innerText = opponentUsername;
-                document.getElementById('p2-name').innerText = myUsername + " (Du)";
-                startVersusGame();
-            }
-
-            if (data.type === 'ANSWER') {
-                processAnswer(data.isCorrect);
-            }
-        }
-
-        function copyRoomCode() {
-            const copyText = document.getElementById("generated-code-display");
-            copyText.select();
-            navigator.clipboard.writeText(copyText.value);
-            alert("Kopierade koden: " + copyText.value);
-        }
-
-        // --- 3. FLASHCARDS LOGIK ---
-        function flipCard() {
-            isFlipped = !isFlipped;
-            const cardInner = document.getElementById('flashcard-inner');
-            if (isFlipped) cardInner.classList.add('rotate-y-180');
-            else cardInner.classList.remove('rotate-y-180');
-        }
-
-        function updateFlashcard() {
-            if (filteredWords.length === 0) return;
-            isFlipped = false;
-            document.getElementById('flashcard-inner').classList.remove('rotate-y-180');
-
-            const item = filteredWords[fcIndex];
-            document.getElementById('fc-word').innerText = item.word;
-            document.getElementById('fc-desc').innerText = item.desc;
-            document.getElementById('fc-chapter-badge').innerText = `Kapitel ${item.chapter}`;
-            document.getElementById('card-counter').innerText = `Kort ${fcIndex + 1} / ${filteredWords.length}`;
-        }
-
-        function nextCard() {
-            fcIndex = (fcIndex + 1) % filteredWords.length;
-            updateFlashcard();
-        }
-
-        function prevCard() {
-            if (fcIndex > 0) fcIndex--;
-            updateFlashcard();
-        }
-
-        function shuffleCards() {
-            filteredWords.sort(() => Math.random() - 0.5);
-            fcIndex = 0;
-            updateFlashcard();
-        }
-
-        // --- 4. ORDLISTA LOGIK ---
-        function renderWordlist() {
-            const container = document.getElementById('wordlist-container');
-            container.innerHTML = '';
-
-            filteredWords.forEach(item => {
-                const card = document.createElement('div');
-                card.className = "bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col gap-1 hover:border-slate-300 transition";
-                card.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <h4 class="font-bold text-indigo-900 text-base">${item.word}</h4>
-                        <span class="text-[10px] font-semibold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">Kap ${item.chapter}</span>
-                    </div>
-                    <p class="text-sm text-slate-600 leading-relaxed">${item.desc}</p>
-                `;
-                container.appendChild(card);
-            });
-        }
-
-        function filterWordlist() {
-            const query = document.getElementById('search-input').value.toLowerCase();
-            const cards = document.getElementById('wordlist-container').children;
-
-            Array.from(cards).forEach(card => {
-                const text = card.innerText.toLowerCase();
-                if (text.includes(query)) {
-                    card.classList.remove('hidden');
-                } else {
-                    card.classList.add('hidden');
-                }
-            });
-        }
-    </script>
+<body>
+<div class="wrap">
+<header>
+ <div class="logo"><i>🎓</i><div><b>Pluggkompis</b><small>Träna & förhör inför prov</small></div></div>
+ <button class="btn ghost" id="editBtn">✏️ Ändra ord</button>
+</header>
+
+<div id="panel" class="card hide">
+ <div class="row" style="margin-bottom:10px"><b>Egna ord & förklaringar</b><span class="chip">ord:förklaring, en per rad</span></div>
+ <textarea id="words" rows="6"></textarea>
+ <div class="row mt" style="justify-content:flex-end"><button class="btn ghost" id="cancelBtn">Avbryt</button><button class="btn primary" id="saveBtn">Spara</button></div>
+</div>
+
+<nav id="nav">
+ <div id="pill"></div>
+ <button data-t="flash" class="on"><span>🗂️</span>Studiekort</button>
+ <button data-t="pq"><span>🎤</span>Förhör</button>
+ <button data-t="vs"><span>⚡</span>1v1</button>
+ <button data-t="list"><span>📖</span>Ordlista</button>
+</nav>
+
+<!-- Studiekort -->
+<section id="s-flash" class="on">
+ <div class="row"><span class="chip" id="fcCount"></span><button class="btn ghost" id="shuf" style="padding:6px 12px;font-size:12px">🔀 Blanda</button></div>
+ <div class="bar"><div id="fcBar"></div></div>
+ <div class="fc" id="fc"><div class="fci" id="fci">
+  <div class="face front"><small>Tryck för att vända</small><div class="mid"><div class="big" id="fcW"></div></div><small>Mellanslag = vänd · ← → = bläddra</small></div>
+  <div class="face back"><small>Förklaring</small><div class="mid"><p id="fcD"></p></div><small>Kom ihåg detta!</small></div>
+ </div></div>
+ <div class="nav2"><button class="btn ghost" id="prev">← Föregående</button><button class="btn primary" id="next">Nästa →</button></div>
+</section>
+
+<!-- Förhör -->
+<section id="s-pq">
+ <div class="card" id="pqCard">
+  <div class="row"><span class="chip" id="pqProg"></span><span class="chip g" id="pqScore">✓ 0</span></div>
+  <div class="bar"><div id="pqBar"></div></div>
+  <div class="center" style="padding:28px 0 8px"><span class="lbl">Förhörsledaren frågar: "Vad betyder…"</span><div class="big mt" id="pqW"></div></div>
+  <div class="ans hide" id="pqAns"><span class="lbl" style="color:var(--mute)">Facit</span><p id="pqA" style="margin-top:4px;line-height:1.5"></p></div>
+  <div class="mt center" id="pqReveal"><button class="btn primary" style="padding:14px 32px" id="revealBtn">👁️ Visa facit</button></div>
+  <div class="nav2 mt hide" id="pqJudge"><button class="btn badb" style="padding:14px" data-j="0">✕ Fel</button><button class="btn okb" style="padding:14px" data-j="1">✓ Rätt!</button></div>
+ </div>
+ <div class="card center hide" id="pqRes"><div style="font-size:56px">🏆</div><div class="big mt">Bra jobbat!</div>
+  <p style="color:var(--mute);margin:10px 0 20px">Ni fick <b id="pqFin" style="color:var(--pri);font-size:22px"></b> rätt</p>
+  <button class="btn primary" id="pqAgain">Förhör igen</button></div>
+</section>
+
+<!-- 1v1 -->
+<section id="s-vs">
+ <div class="seg"><button id="mLocal" class="on">Lokal</button><button id="mOnline">Online</button></div>
+ <div id="onl" class="card hide" style="margin-bottom:14px">
+  <b>🌐 Online-multiplayer</b>
+  <input id="uname" placeholder="Ditt namn" maxlength="16" style="margin-top:12px;max-width:260px">
+  <div class="grid2">
+   <div class="box"><b style="font-size:14px">Skapa rum</b><button class="btn primary" id="mk">Generera kod</button>
+    <div id="hostInfo" class="hide"><div class="row"><input id="code" readonly style="text-align:center;font-weight:700;font-family:monospace"><button class="btn ghost" id="cp">Kopiera</button></div><p id="hostSt" style="font-size:12px;color:var(--amb);text-align:center;margin-top:8px">Väntar på motståndare…</p></div></div>
+   <div class="box"><b style="font-size:14px">Gå med</b><input id="jc" placeholder="Rumskod" style="font-family:monospace;text-transform:uppercase"><button class="btn primary" id="jn">Anslut</button></div>
+  </div>
+ </div>
+ <div class="score">
+  <div class="pl act" id="b1"><small id="n1">Spelare 1</small><b id="sc1">0</b></div>
+  <div class="pl p2" id="b2"><small id="n2">Spelare 2</small><b id="sc2">0</b></div>
+ </div>
+ <div class="card"><div class="row"><span class="lbl">Vilket begrepp matchar?</span><span class="chip" id="vsProg"></span></div>
+  <p id="vsD" style="font-size:19px;font-weight:600;line-height:1.45;margin-top:12px"></p><div class="opts" id="vsO"></div></div>
+</section>
+
+<!-- Ordlista -->
+<section id="s-list">
+ <input id="q" placeholder="🔍 Sök ord eller förklaring…">
+ <div class="wl" id="wl"></div>
+</section>
+</div>
+<div id="toast"></div><canvas id="cv"></canvas>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const shuf=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+const DEF=[
+["Information","Kunskap och meddelanden som överförs till tal, skrift, bilder, koder och symboler."],
+["Medier","Kanal eller verktyg att sprida information, nyheter och underhållning till många människor samtidigt."],
+["Källkritik","Granska och analysera information för att avgöra om den är trovärdig."],
+["Digitalisering","Man integrerar digital teknik i verksamheter och sociala processer."],
+["Maktkoncentration","När makt och inflytande samlas hos en liten grupp eller några få företag."],
+["Kommunikation","När tankar, information, känslor eller åsikter överförs mellan sändare och mottagare."],
+["Välfärd","Människans sammanlagda levnadsförhållanden och välmående."],
+["Socialt skyddsnät","Skydd för dem som har det svårt att klara sig. T.ex. bidrag, vård, stöd."]
+].map(([word,desc])=>({word,desc}));
+let vocab=DEF;
+try{const s=JSON.parse(localStorage.getItem('pk-vocab')||'null');if(Array.isArray(s)&&s.length)vocab=s}catch(e){}
+
+let toastT;function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2200)}
+
+/* confetti */
+function confetti(){const c=$('cv'),x=c.getContext('2d');c.width=innerWidth;c.height=innerHeight;
+const P=Array.from({length:90},()=>({x:innerWidth/2,y:innerHeight/2,vx:(Math.random()-.5)*14,vy:Math.random()*-14-3,s:Math.random()*7+4,c:`hsl(${Math.random()*360},85%,60%)`,r:Math.random()*6}));
+let f=0;(function d(){x.clearRect(0,0,c.width,c.height);P.forEach(p=>{p.vy+=.4;p.x+=p.vx;p.y+=p.vy;p.r+=.2;x.fillStyle=p.c;x.save();x.translate(p.x,p.y);x.rotate(p.r);x.fillRect(-p.s/2,-p.s/2,p.s,p.s*.6);x.restore()});if(++f<110)requestAnimationFrame(d);else x.clearRect(0,0,c.width,c.height)})()}
+
+/* tabs */
+const tabs=['flash','pq','vs','list'];
+function tab(t){tabs.forEach((k,i)=>{$('s-'+k).classList.toggle('on',k===t);document.querySelectorAll('#nav button')[i].classList.toggle('on',k===t)});
+$('pill').style.transform=`translateX(${tabs.indexOf(t)*100}%)`;cur=t;if(t==='pq')pqReset();if(t==='vs'&&mode==='local')vsStart(true)}
+let cur='flash';
+document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>tab(b.dataset.t));
+
+/* edit words */
+$('editBtn').onclick=()=>{$('words').value=vocab.map(v=>v.word+':'+v.desc).join('\n');$('panel').classList.toggle('hide')};
+$('cancelBtn').onclick=()=>$('panel').classList.add('hide');
+$('saveBtn').onclick=()=>{const n=[];$('words').value.split('\n').forEach(l=>{const i=l.indexOf(':');if(i>0){const w=l.slice(0,i).trim(),d=l.slice(i+1).trim();if(w&&d)n.push({word:w,desc:d})}});
+if(n.length<2){toast('Minst 2 rader med ord:förklaring behövs');return}
+vocab=n;try{localStorage.setItem('pk-vocab',JSON.stringify(n))}catch(e){}
+$('panel').classList.add('hide');init();toast(`Laddade ${n.length} ord ✓`)};
+
+/* flashcards */
+let deck=[],fi=0;
+function fcShow(dir){const f=deck[fi];$('fci').classList.remove('flip');
+const set=()=>{$('fcW').textContent=f.word;$('fcD').textContent=f.desc};
+setTimeout(set,$('fci').classList.contains('flip')?300:0);set();
+$('fcCount').textContent=`Kort ${fi+1} / ${deck.length}`;$('fcBar').style.width=((fi+1)/deck.length*100)+'%';
+if(dir){const e=$('fc');e.classList.remove('slide-l','slide-r');void e.offsetWidth;e.classList.add(dir>0?'slide-r':'slide-l')}}
+const flip=()=>$('fci').classList.toggle('flip');
+$('fc').onclick=flip;
+$('next').onclick=()=>{fi=(fi+1)%deck.length;fcShow(1)};
+$('prev').onclick=()=>{fi=(fi-1+deck.length)%deck.length;fcShow(-1)};
+$('shuf').onclick=()=>{deck=shuf(deck);fi=0;fcShow(1);toast('Blandat 🔀')};
+addEventListener('keydown',e=>{if(/INPUT|TEXTAREA/.test(e.target.tagName)||cur!=='flash')return;
+if(e.code==='Space'){e.preventDefault();flip()}if(e.key==='ArrowRight')$('next').click();if(e.key==='ArrowLeft')$('prev').click()});
+
+/* partner quiz */
+let pl=[],pi=0,ps=0;
+function pqReset(){pl=shuf(vocab);pi=0;ps=0;$('pqCard').classList.remove('hide');$('pqRes').classList.add('hide');pqShow()}
+function pqShow(){if(pi>=pl.length){$('pqCard').classList.add('hide');$('pqRes').classList.remove('hide');$('pqFin').textContent=`${ps} av ${pl.length}`;if(ps/pl.length>=.6)confetti();return}
+$('pqProg').textContent=`Kort ${pi+1} av ${pl.length}`;$('pqScore').textContent='✓ '+ps;$('pqBar').style.width=(pi/pl.length*100)+'%';
+$('pqW').textContent=pl[pi].word;$('pqA').textContent=pl[pi].desc;
+$('pqAns').classList.add('hide');$('pqReveal').classList.remove('hide');$('pqJudge').classList.add('hide')}
+$('revealBtn').onclick=()=>{$('pqAns').classList.remove('hide');$('pqReveal').classList.add('hide');$('pqJudge').classList.remove('hide')};
+document.querySelectorAll('[data-j]').forEach(b=>b.onclick=()=>{if(b.dataset.j==='1')ps++;pi++;pqShow()});
+$('pqAgain').onclick=pqReset;
+
+/* versus */
+let mode='local',Q=[],qi=0,sc=[0,0],turn=1,locked=false,role=1,names=['Spelare 1','Spelare 2'];
+function buildQ(){return shuf(vocab).map(w=>({word:w.word,desc:w.desc,opts:shuf([w.word,...shuf(vocab.filter(v=>v.word!==w.word)).slice(0,3).map(v=>v.word)])}))}
+function vsStart(fresh,q){Q=q||buildQ();qi=0;sc=[0,0];turn=1;locked=false;vsUI();vsShow()}
+function vsUI(){$('sc1').textContent=sc[0];$('sc2').textContent=sc[1];$('n1').textContent=names[0];$('n2').textContent=names[1];
+$('b1').classList.toggle('act',turn===1);$('b2').classList.toggle('act',turn===2)}
+function vsShow(){locked=false;$('vsProg').textContent=`${Math.min(qi+1,Q.length)} / ${Q.length}`;
+if(qi>=Q.length){const w=sc[0]>sc[1]?names[0]+' vinner! 🎉':sc[1]>sc[0]?names[1]+' vinner! 🎉':'Oavgjort! 🤝';$('vsD').textContent='Spelet är slut! '+w;
+$('vsO').innerHTML='<button class="btn primary" style="grid-column:1/-1;padding:14px" id="again">Spela igen</button>';
+$('again').onclick=()=>{if(mode==='online'&&!isHost){toast('Värden startar ny omgång');return}vsStart(true);if(mode==='online')send({t:'START',q:Q,name:myName,words:vocab})};
+if(sc[0]!==sc[1])confetti();return}
+const q=Q[qi];$('vsD').textContent='"'+q.desc+'"';$('vsO').innerHTML='';
+q.opts.forEach(o=>{const b=document.createElement('button');b.className='opt';b.textContent=o;
+b.disabled=mode==='online'&&turn!==role;if(b.disabled)b.classList.add('dim');
+b.onclick=()=>{if(locked||(mode==='online'&&turn!==role))return;if(mode==='online')send({t:'ANS',w:o});answer(o)};$('vsO').appendChild(b)})}
+function answer(w){if(locked)return;locked=true;const q=Q[qi],ok=w===q.word;
+document.querySelectorAll('#vsO .opt').forEach(b=>{b.disabled=true;if(b.textContent===q.word)b.classList.add('right');else if(b.textContent===w)b.classList.add('wrong');else b.classList.add('dim')});
+if(ok){sc[turn-1]+=10;const e=$('sc'+turn);e.textContent=sc[turn-1];e.classList.add('bump');setTimeout(()=>e.classList.remove('bump'),300)}
+setTimeout(()=>{turn=turn===1?2:1;qi++;vsUI();vsShow()},ok?800:1300)}
+function setMode(m){mode=m;$('mLocal').classList.toggle('on',m==='local');$('mOnline').classList.toggle('on',m==='online');$('onl').classList.toggle('hide',m==='local');
+if(m==='local'){names=['Spelare 1','Spelare 2'];vsStart(true)}}
+$('mLocal').onclick=()=>setMode('local');$('mOnline').onclick=()=>setMode('online');
+
+/* online */
+let peer,conn,isHost=false,myName='Spelare';
+const uname=()=>($('uname').value.trim()||'Spelare'+(Math.random()*90+10|0));
+const send=d=>{if(conn&&conn.open)conn.send(d)};
+$('mk').onclick=()=>{myName=uname();isHost=true;role=1;const code='PK-'+Math.random().toString(36).slice(2,7).toUpperCase();
+$('code').value=code;$('hostInfo').classList.remove('hide');if(peer)peer.destroy();peer=new Peer(code);
+peer.on('connection',c=>{conn=c;wire()});peer.on('error',e=>toast('Fel: '+(e.type||e)))};
+$('jn').onclick=()=>{myName=uname();isHost=false;role=2;const code=$('jc').value.trim().toUpperCase();if(!code){toast('Skriv in en rumskod');return}
+if(peer)peer.destroy();peer=new Peer();peer.on('open',()=>{conn=peer.connect(code,{reliable:true});wire()});peer.on('error',()=>toast('Kunde inte ansluta – kolla koden'))};
+$('cp').onclick=()=>{try{navigator.clipboard.writeText($('code').value);toast('Kopierad ✓')}catch(e){$('code').select()}};
+function wire(){conn.on('open',()=>{if(!isHost)send({t:'JOIN',name:myName})});
+conn.on('close',()=>toast('Motståndaren lämnade'));
+conn.on('data',d=>{
+ if(d.t==='JOIN'&&isHost){names=[myName+' (du)',d.name];$('onl').classList.add('hide');const q=buildQ();vsStart(true,q);send({t:'START',q,name:myName,words:vocab});toast(d.name+' anslöt!')}
+ if(d.t==='START'&&!isHost){vocab=d.words||vocab;names=[d.name,myName+' (du)'];$('onl').classList.add('hide');vsStart(true,d.q);toast('Ansluten – spelet startar!')}
+ if(d.t==='ANS')answer(d.w)})}
+
+/* wordlist */
+function renderList(){const q=$('q').value.toLowerCase();$('wl').innerHTML=vocab.filter(v=>(v.word+' '+v.desc).toLowerCase().includes(q)).map((v,i)=>`<div class="wi" style="animation-delay:${Math.min(i,12)*30}ms"><b>${esc(v.word)}</b><p>${esc(v.desc)}</p></div>`).join('')||'<p class="center" style="color:var(--mute);padding:20px">Inga träffar</p>'}
+$('q').oninput=renderList;
+
+function init(){deck=[...vocab];fi=0;fcShow(0);pqReset();if(mode==='local')vsStart(true);renderList()}
+init();
+</script>
 </body>
 </html>
