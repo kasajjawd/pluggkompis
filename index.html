@@ -162,7 +162,8 @@ canvas{position:fixed;inset:0;pointer-events:none;z-index:98}
 <script>
 const $=id=>document.getElementById(id);
 const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const shuf=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+let rnd=Math.random;const shuf=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=rnd()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+const mulberry=s=>()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
 const DEF=[
 ["Information","Kunskap och meddelanden som överförs till tal, skrift, bilder, koder och symboler."],
 ["Medier","Kanal eller verktyg att sprida information, nyheter och underhållning till många människor samtidigt."],
@@ -226,14 +227,14 @@ $('pqAgain').onclick=pqReset;
 
 /* versus */
 let mode='local',Q=[],qi=0,sc=[0,0],turn=1,locked=false,role=1,names=['Spelare 1','Spelare 2'];
-function buildQ(){return shuf(vocab).map(w=>({word:w.word,desc:w.desc,opts:shuf([w.word,...shuf(vocab.filter(v=>v.word!==w.word)).slice(0,3).map(v=>v.word)])}))}
+function buildQ(seed){rnd=seed?mulberry(seed):Math.random;const q=shuf(vocab).map(w=>({word:w.word,desc:w.desc,opts:shuf([w.word,...shuf(vocab.filter(v=>v.word!==w.word)).slice(0,3).map(v=>v.word)])}));rnd=Math.random;return q}
 function vsStart(fresh,q){Q=q||buildQ();qi=0;sc=[0,0];turn=1;locked=false;vsUI();vsShow()}
 function vsUI(){$('sc1').textContent=sc[0];$('sc2').textContent=sc[1];$('n1').textContent=names[0];$('n2').textContent=names[1];
 $('b1').classList.toggle('act',turn===1);$('b2').classList.toggle('act',turn===2)}
 function vsShow(){locked=false;$('vsProg').textContent=`${Math.min(qi+1,Q.length)} / ${Q.length}`;
 if(qi>=Q.length){const w=sc[0]>sc[1]?names[0]+' vinner! 🎉':sc[1]>sc[0]?names[1]+' vinner! 🎉':'Oavgjort! 🤝';$('vsD').textContent='Spelet är slut! '+w;
 $('vsO').innerHTML='<button class="btn primary" style="grid-column:1/-1;padding:14px" id="again">Spela igen</button>';
-$('again').onclick=()=>{if(mode==='online'&&!isHost){toast('Värden startar ny omgång');return}vsStart(true);if(mode==='online')send({t:'START',q:Q,name:myName,words:vocab})};
+$('again').onclick=()=>{if(mode==='online'){if(!isHost){toast('Värden startar ny omgång');return}const sd=newSeed();vsStart(true,buildQ(sd));send('start',{seed:sd,name:myName});return}vsStart(true)};
 if(sc[0]!==sc[1])confetti();return}
 const q=Q[qi];$('vsD').textContent='"'+q.desc+'"';$('vsO').innerHTML='';
 q.opts.forEach(o=>{const b=document.createElement('button');b.className='opt';b.textContent=o;
@@ -247,22 +248,39 @@ function setMode(m){mode=m;$('mLocal').classList.toggle('on',m==='local');$('mOn
 if(m==='local'){names=['Spelare 1','Spelare 2'];vsStart(true)}}
 $('mLocal').onclick=()=>setMode('local');$('mOnline').onclick=()=>setMode('online');
 
-/* online */
-let peer,conn,isHost=false,myName='Spelare';
+/* online via PeerJS (for Vercel / normal hosting) */
+let peer=null,conn=null,isHost=false,myName='Spelare',started=false,busy=false;
 const uname=()=>($('uname').value.trim()||'Spelare'+(Math.random()*90+10|0));
-const send=d=>{if(conn&&conn.open)conn.send(d)};
-$('mk').onclick=()=>{myName=uname();isHost=true;role=1;const code='PK-'+Math.random().toString(36).slice(2,7).toUpperCase();
-$('code').value=code;$('hostInfo').classList.remove('hide');if(peer)peer.destroy();peer=new Peer(code);
-peer.on('connection',c=>{conn=c;wire()});peer.on('error',e=>toast('Fel: '+(e.type||e)))};
-$('jn').onclick=()=>{myName=uname();isHost=false;role=2;const code=$('jc').value.trim().toUpperCase();if(!code){toast('Skriv in en rumskod');return}
-if(peer)peer.destroy();peer=new Peer();peer.on('open',()=>{conn=peer.connect(code,{reliable:true});wire()});peer.on('error',()=>toast('Kunde inte ansluta – kolla koden'))};
+const newSeed=()=>((Math.random()*2147483646)|0)+1;
+const send=(t,d)=>{if(conn&&conn.open)conn.send({t,d})};
+const ICE={config:{iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:global.stun.twilio.com:3478'}]}};
+function resetNet(){try{if(peer)peer.destroy()}catch(e){}peer=null;conn=null;started=false}
+function joinReset(){busy=false;$('jn').disabled=false;$('jn').textContent='Anslut'}
+function wire(c){conn=c;
+ c.on('open',()=>{if(!isHost)send('hello',{name:myName})});
+ c.on('close',()=>toast('Motståndaren lämnade'));
+ c.on('error',()=>toast('Anslutningsfel'));
+ c.on('data',m=>{const d=(m&&m.d)||{};
+  if(m.t==='hello'&&isHost){names=[myName+' (du)',String(d.name||'Motståndare').slice(0,16)];$('onl').classList.add('hide');
+   const sd=newSeed();vsStart(true,buildQ(sd));send('start',{seed:sd,name:myName,words:vocab});toast(names[1]+' anslöt!')}
+  if(m.t==='start'&&!isHost){if(Array.isArray(d.words)&&d.words.every(x=>x&&x.word&&x.desc))vocab=d.words;
+   names=[String(d.name||'Värd').slice(0,16),myName+' (du)'];started=true;joinReset();$('onl').classList.add('hide');vsStart(true,buildQ(d.seed));toast('Ansluten – spelet startar!')}
+  if(m.t==='ans')answer(String(d.w))})}
+$('mk').onclick=()=>{if(busy)return;busy=true;$('mk').disabled=true;myName=uname();isHost=true;role=1;resetNet();
+ const code='PK'+Math.random().toString(36).slice(2,6).toUpperCase();$('hostInfo').classList.remove('hide');$('hostSt').textContent='Skapar rum…';
+ const done=()=>{busy=false;$('mk').disabled=false};
+ const to=setTimeout(()=>{$('hostSt').textContent='Servern svarar inte – kolla nätverket och försök igen';done()},10000);
+ peer=new Peer(code,ICE);
+ peer.on('open',id=>{clearTimeout(to);$('code').value=id;$('hostSt').textContent='Väntar på motståndare…';done()});
+ peer.on('connection',c=>wire(c));
+ peer.on('error',e=>{clearTimeout(to);$('hostSt').textContent='Fel: '+e.type+' – försök igen';done()})};
+$('jn').onclick=()=>{if(busy)return;const code=$('jc').value.trim().toUpperCase();if(!code){toast('Skriv in en rumskod');return}
+ busy=true;$('jn').disabled=true;$('jn').textContent='Ansluter…';myName=uname();isHost=false;role=2;resetNet();
+ const to=setTimeout(()=>{if(!started){toast('Ingen kontakt – kolla koden och nätverket');joinReset()}},15000);
+ peer=new Peer(undefined,ICE);
+ peer.on('open',()=>wire(peer.connect(code,{reliable:true})));
+ peer.on('error',e=>{clearTimeout(to);toast(e.type==='peer-unavailable'?'Rummet finns inte – kolla koden':'Fel: '+e.type);joinReset()})};
 $('cp').onclick=()=>{try{navigator.clipboard.writeText($('code').value);toast('Kopierad ✓')}catch(e){$('code').select()}};
-function wire(){conn.on('open',()=>{if(!isHost)send({t:'JOIN',name:myName})});
-conn.on('close',()=>toast('Motståndaren lämnade'));
-conn.on('data',d=>{
- if(d.t==='JOIN'&&isHost){names=[myName+' (du)',d.name];$('onl').classList.add('hide');const q=buildQ();vsStart(true,q);send({t:'START',q,name:myName,words:vocab});toast(d.name+' anslöt!')}
- if(d.t==='START'&&!isHost){vocab=d.words||vocab;names=[d.name,myName+' (du)'];$('onl').classList.add('hide');vsStart(true,d.q);toast('Ansluten – spelet startar!')}
- if(d.t==='ANS')answer(d.w)})}
 
 /* wordlist */
 function renderList(){const q=$('q').value.toLowerCase();$('wl').innerHTML=vocab.filter(v=>(v.word+' '+v.desc).toLowerCase().includes(q)).map((v,i)=>`<div class="wi" style="animation-delay:${Math.min(i,12)*30}ms"><b>${esc(v.word)}</b><p>${esc(v.desc)}</p></div>`).join('')||'<p class="center" style="color:var(--mute);padding:20px">Inga träffar</p>'}
