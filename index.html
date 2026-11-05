@@ -261,30 +261,41 @@ $('mLocal').onclick=()=>setMode('local');$('mOnline').onclick=()=>setMode('onlin
 /* online via ntfy.sh pub/sub: plain HTTPS, works through school networks, no accounts */
 const NTFY='https://ntfy.sh/';
 const me=Math.random().toString(36).slice(2,10);
-let es=null,topic='',isHost=false,myName='Spelare',started=false,busy=false,lastSeed=0,wbuf={};
+let es=null,gen=0,topic='',isHost=false,myName='Spelare',started=false,busy=false,lastSeed=0,wbuf={},lastId='',seen=new Set(),lastPush=0;
 const uname=()=>($('uname').value.trim()||'Spelare'+(Math.random()*90+10|0));
 const newSeed=()=>((Math.random()*2147483646)|0)+1;
 const net=m=>{const e=$('netSt');if(e)e.textContent=m};
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
 function joinReset(){busy=false;$('jn').disabled=false;$('jn').textContent='Anslut'}
-function send(t,d){if(!topic)return Promise.resolve();d=d||{};if(t==='ans')d={...d,q:qi};
- return fetch(NTFY+topic,{method:'POST',body:JSON.stringify({f:me,t,d})}).catch(()=>net('Kunde inte skicka – kolla internet'))}
-function closeNet(){if(es){es.close();es=null}started=false;lastSeed=0;wbuf={}}
-function listen(code,onopen){closeNet();topic='pluggkompis-'+code.toLowerCase();
- es=new EventSource(NTFY+topic+'/sse');
+async function send(t,d){if(!topic)return false;d=d||{};if(t==='ans')d={...d,q:qi};const body=JSON.stringify({f:me,t,d});
+ for(let i=0;i<4;i++){
+  try{const r=await fetch(NTFY+topic,{method:'POST',body});if(r.ok)return true;
+   net(r.status===429?'ntfy.sh: gränsen för meddelanden nådd – försöker igen…':'Sändfel HTTP '+r.status)}
+  catch(e){net('Kunde inte skicka – kolla internet')}
+  await wait(1000*(i+1))}
+ toast('Meddelandet kom inte fram – motståndaren kan se fel poäng');return false}
+function closeNet(){gen++;if(es){es.close();es=null}started=false;lastSeed=0;wbuf={};lastId='';seen=new Set();lastPush=0}
+function openES(onopen){const my=gen;
+ es=new EventSource(NTFY+topic+'/sse'+(lastId?'?since='+lastId:''));
  es.onopen=()=>{net('Uppkopplad ✓');if(onopen){const f=onopen;onopen=null;f()}};
- es.onerror=()=>net('Tappade kontakten – återansluter…');
- es.onmessage=ev=>{let m;try{const o=JSON.parse(ev.data);if(o.event&&o.event!=='message')return;m=JSON.parse(o.message)}catch(e){return}
+ es.onerror=()=>{if(my!==gen)return;es.close();net('Tappade kontakten – återansluter…');
+  setTimeout(()=>{if(my===gen)openES(onopen)},1500)};
+ es.onmessage=ev=>{let m;try{const o=JSON.parse(ev.data);if(o.event&&o.event!=='message')return;
+   if(o.id){if(seen.has(o.id))return;seen.add(o.id);lastId=o.id}m=JSON.parse(o.message)}catch(e){return}
   if(!m||m.f===me)return;handle(m.t,m.d||{})}}
-async function hostPush(){const s=JSON.stringify(vocab),n=Math.ceil(s.length/1200);
- for(let i=0;i<n;i++)await send('w',{i,n,p:s.slice(i*1200,(i+1)*1200)});
- await send('start',{seed:lastSeed,name:myName})}
+function listen(code,onopen){closeNet();topic='pluggkompis-'+code.toLowerCase();openES(onopen)}
+async function hostPush(){const isDef=JSON.stringify(vocab)===JSON.stringify(DEF);
+ if(!isDef){const s=JSON.stringify(vocab),n=Math.ceil(s.length/1200);
+  for(let i=0;i<n;i++)await send('w',{i,n,p:s.slice(i*1200,(i+1)*1200)})}
+ await send('start',{seed:lastSeed,name:myName,def:isDef})}
 function handle(t,d){
  if(t==='hello'&&isHost){names=[myName+' (du)',String(d.name||'Motståndare').slice(0,16)];$('onl').classList.add('hide');
   if(!lastSeed){started=true;lastSeed=newSeed();vsStart(true,buildQ(lastSeed));toast(names[1]+' anslöt!')}
-  hostPush()}
+  if(Date.now()-lastPush>5000){lastPush=Date.now();hostPush()}}
  if(t==='w'&&!isHost){wbuf[d.i]=d.p;wbuf.n=d.n}
  if(t==='start'&&!isHost){if(d.seed===lastSeed)return;lastSeed=d.seed;
-  if(wbuf.n){let s='';for(let i=0;i<wbuf.n;i++)s+=wbuf[i]||'';try{const w=JSON.parse(s);if(Array.isArray(w)&&w.every(x=>x&&x.word&&x.desc))vocab=w}catch(e){}wbuf={}}
+  if(d.def)vocab=DEF;
+  else if(wbuf.n){let s='';for(let i=0;i<wbuf.n;i++)s+=wbuf[i]||'';try{const w=JSON.parse(s);if(Array.isArray(w)&&w.every(x=>x&&x.word&&x.desc))vocab=w}catch(e){}wbuf={}}
   names=[String(d.name||'Värd').slice(0,16),myName+' (du)'];started=true;joinReset();$('onl').classList.add('hide');net('Ansluten ✓');vsStart(true,buildQ(d.seed));toast('Ansluten – spelet startar!')}
  if(t==='ans'&&d.q===qi)answer(String(d.w))}
 $('mk').onclick=()=>{if(busy)return;busy=true;$('mk').disabled=true;myName=uname();isHost=true;role=1;
@@ -295,7 +306,7 @@ $('jn').onclick=()=>{if(busy)return;const code=$('jc').value.trim().toUpperCase(
  busy=true;$('jn').disabled=true;$('jn').textContent='Ansluter…';myName=uname();isHost=false;role=2;net('Kopplar upp…');
  const to=setTimeout(()=>{net('ntfy.sh nås inte (blockerad sida eller inget internet?)');toast('Kunde inte koppla upp');joinReset()},10000);
  listen(code,()=>{clearTimeout(to);net('Uppkopplad ✓ – ropar på värden…');let n=0;
-  const t=setInterval(()=>{if(started||!es){clearInterval(t);return}if(++n>12){clearInterval(t);toast('Ingen värd svarade – kolla koden');net('Ingen värd svarade på den koden');joinReset();return}send('hello',{name:myName})},2000);
+  const t=setInterval(()=>{if(started||!es){clearInterval(t);return}if(++n>8){clearInterval(t);toast('Ingen värd svarade – kolla koden');net('Ingen värd svarade på den koden');joinReset();return}send('hello',{name:myName})},3000);
   send('hello',{name:myName})})};
 $('cp').onclick=()=>{try{navigator.clipboard.writeText($('code').value);toast('Kopierad ✓')}catch(e){$('code').select()}};
 
