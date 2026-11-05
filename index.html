@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Pluggkompis</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
 <style>
 :root{--bg:#f5f6fb;--surf:#fff;--surf2:#eef0f8;--text:#161a2e;--mute:#6b7190;--line:#e2e5f1;--pri:#6366f1;--pri2:#8b5cf6;--ok:#10b981;--bad:#f43f5e;--amb:#f59e0b;--sh:0 8px 30px rgba(60,60,120,.08);--r:20px;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d0f1c;--surf:#171a2e;--surf2:#1f2340;--text:#eef0ff;--mute:#9298bb;--line:#2a2f52;--sh:0 8px 30px rgba(0,0,0,.4)}}
@@ -259,48 +258,46 @@ function setMode(m){mode=m;$('mLocal').classList.toggle('on',m==='local');$('mOn
 if(m==='local'){names=['Spelare 1','Spelare 2'];vsStart(true)}}
 $('mLocal').onclick=()=>setMode('local');$('mOnline').onclick=()=>setMode('online');
 
-/* online via PeerJS (for Vercel / normal hosting) */
-let peer=null,conn=null,isHost=false,myName='Spelare',started=false,busy=false;
+/* online via ntfy.sh pub/sub: plain HTTPS, works through school networks, no accounts */
+const NTFY='https://ntfy.sh/';
+const me=Math.random().toString(36).slice(2,10);
+let es=null,topic='',isHost=false,myName='Spelare',started=false,busy=false,lastSeed=0,wbuf={};
 const uname=()=>($('uname').value.trim()||'Spelare'+(Math.random()*90+10|0));
 const newSeed=()=>((Math.random()*2147483646)|0)+1;
 const net=m=>{const e=$('netSt');if(e)e.textContent=m};
-const send=(t,d)=>{if(conn&&conn.open)conn.send({t,d})};
-const ICE={debug:1,config:{iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:global.stun.twilio.com:3478'},
- {urls:['turn:openrelay.metered.ca:80','turn:openrelay.metered.ca:443','turn:openrelay.metered.ca:443?transport=tcp'],username:'openrelayproject',credential:'openrelayproject'}]}};
-function resetNet(){try{if(peer)peer.destroy()}catch(e){}peer=null;conn=null;started=false}
 function joinReset(){busy=false;$('jn').disabled=false;$('jn').textContent='Anslut'}
-function wire(c){conn=c;let hi=0;
- const pc=c.peerConnection;if(pc)pc.addEventListener('iceconnectionstatechange',()=>{net('Nätverk: '+pc.iceConnectionState);if(pc.iceConnectionState==='failed'){toast('Nätverket blockerar direktanslutning');if(!isHost)joinReset()}});
- c.on('open',()=>{net('Ansluten ✓ – startar spelet…');
-  if(!isHost){send('hello',{name:myName});const t=setInterval(()=>{if(started||++hi>6||!c.open){clearInterval(t);return}send('hello',{name:myName})},2000)}});
- c.on('close',()=>{toast('Motståndaren lämnade');net('Anslutningen stängdes')});
- c.on('error',e=>{toast('Anslutningsfel');net('Fel: '+(e&&e.type||e))});
- c.on('data',m=>{const d=(m&&m.d)||{};
-  if(m.t==='hello'&&isHost){if(started)return;started=true;names=[myName+' (du)',String(d.name||'Motståndare').slice(0,16)];$('onl').classList.add('hide');
-   const sd=newSeed();vsStart(true,buildQ(sd));send('start',{seed:sd,name:myName,words:vocab});toast(names[1]+' anslöt!')}
-  if(m.t==='start'&&!isHost){if(started)return;if(Array.isArray(d.words)&&d.words.every(x=>x&&x.word&&x.desc))vocab=d.words;
-   names=[String(d.name||'Värd').slice(0,16),myName+' (du)'];started=true;joinReset();$('onl').classList.add('hide');vsStart(true,buildQ(d.seed));toast('Ansluten – spelet startar!')}
-  if(m.t==='ans')answer(String(d.w))})}
-$('mk').onclick=()=>{if(busy)return;busy=true;$('mk').disabled=true;myName=uname();isHost=true;role=1;resetNet();
- const code='PK'+Math.random().toString(36).slice(2,6).toUpperCase();$('hostInfo').classList.remove('hide');$('hostSt').textContent='Skapar rum…';net('Ansluter till servern…');
- const done=()=>{busy=false;$('mk').disabled=false};
- const to=setTimeout(()=>{$('hostSt').textContent='Servern svarar inte – försök igen';net('Servern (0.peerjs.com) nås inte – nätverket blockerar den troligen');done()},10000);
- peer=new Peer(code,ICE);
- peer.on('open',id=>{clearTimeout(to);$('code').value=id;$('hostSt').textContent='Väntar på motståndare…';net('Rum klart ✓ – håll den här fliken öppen');done()});
- peer.on('connection',c=>{if(conn&&conn.open){c.close();return}net('Motståndare ansluter…');wire(c)});
- peer.on('disconnected',()=>{$('hostSt').textContent='Tappade kontakten – återansluter…';try{peer.reconnect()}catch(e){}});
- peer.on('error',e=>{clearTimeout(to);$('hostSt').textContent='Fel: '+e.type+' – försök igen';net('Fel: '+e.type);done()})};
+function send(t,d){if(!topic)return Promise.resolve();d=d||{};if(t==='ans')d={...d,q:qi};
+ return fetch(NTFY+topic,{method:'POST',body:JSON.stringify({f:me,t,d})}).catch(()=>net('Kunde inte skicka – kolla internet'))}
+function closeNet(){if(es){es.close();es=null}started=false;lastSeed=0;wbuf={}}
+function listen(code,onopen){closeNet();topic='pluggkompis-'+code.toLowerCase();
+ es=new EventSource(NTFY+topic+'/sse');
+ es.onopen=()=>{net('Uppkopplad ✓');if(onopen){const f=onopen;onopen=null;f()}};
+ es.onerror=()=>net('Tappade kontakten – återansluter…');
+ es.onmessage=ev=>{let m;try{const o=JSON.parse(ev.data);if(o.event&&o.event!=='message')return;m=JSON.parse(o.message)}catch(e){return}
+  if(!m||m.f===me)return;handle(m.t,m.d||{})}}
+async function hostPush(){const s=JSON.stringify(vocab),n=Math.ceil(s.length/1200);
+ for(let i=0;i<n;i++)await send('w',{i,n,p:s.slice(i*1200,(i+1)*1200)});
+ await send('start',{seed:lastSeed,name:myName})}
+function handle(t,d){
+ if(t==='hello'&&isHost){names=[myName+' (du)',String(d.name||'Motståndare').slice(0,16)];$('onl').classList.add('hide');
+  if(!lastSeed){started=true;lastSeed=newSeed();vsStart(true,buildQ(lastSeed));toast(names[1]+' anslöt!')}
+  hostPush()}
+ if(t==='w'&&!isHost){wbuf[d.i]=d.p;wbuf.n=d.n}
+ if(t==='start'&&!isHost){if(d.seed===lastSeed)return;lastSeed=d.seed;
+  if(wbuf.n){let s='';for(let i=0;i<wbuf.n;i++)s+=wbuf[i]||'';try{const w=JSON.parse(s);if(Array.isArray(w)&&w.every(x=>x&&x.word&&x.desc))vocab=w}catch(e){}wbuf={}}
+  names=[String(d.name||'Värd').slice(0,16),myName+' (du)'];started=true;joinReset();$('onl').classList.add('hide');net('Ansluten ✓');vsStart(true,buildQ(d.seed));toast('Ansluten – spelet startar!')}
+ if(t==='ans'&&d.q===qi)answer(String(d.w))}
+$('mk').onclick=()=>{if(busy)return;busy=true;$('mk').disabled=true;myName=uname();isHost=true;role=1;
+ const code='PK'+Math.random().toString(36).slice(2,7).toUpperCase();$('hostInfo').classList.remove('hide');$('hostSt').textContent='Skapar rum…';net('Kopplar upp…');
+ const to=setTimeout(()=>{$('hostSt').textContent='Kunde inte nå ntfy.sh – försök igen';net('ntfy.sh nås inte (blockerad sida eller inget internet?)');busy=false;$('mk').disabled=false},10000);
+ listen(code,()=>{clearTimeout(to);$('code').value=code;$('hostSt').textContent='Väntar på motståndare…';net('Rum klart ✓ – håll den här fliken öppen');busy=false;$('mk').disabled=false})};
 $('jn').onclick=()=>{if(busy)return;const code=$('jc').value.trim().toUpperCase().replace(/\s/g,'');if(!code){toast('Skriv in en rumskod');return}
- busy=true;$('jn').disabled=true;$('jn').textContent='Ansluter…';myName=uname();isHost=false;role=2;resetNet();net('Ansluter till servern…');
- const to=setTimeout(()=>{if(!started){toast('Ingen kontakt – kolla koden och nätverket');net('Tidsgräns – ingen kontakt med värden');joinReset()}},25000);
- peer=new Peer(undefined,ICE);let tries=0;
- const go=()=>{net('Letar efter rummet '+code+'…');wire(peer.connect(code,{reliable:true,serialization:'json'}))};
- peer.on('open',()=>{net('Servern OK ✓');go()});
- peer.on('error',e=>{if(e.type==='peer-unavailable'&&!started&&++tries<=6){net('Rummet hittades inte än – försöker igen ('+tries+'/6)');setTimeout(()=>{if(peer&&!started&&!peer.destroyed)go()},2000);return}
-  clearTimeout(to);net('Fel: '+e.type);toast(e.type==='peer-unavailable'?'Rummet hittades inte – värden måste ha sidan öppen i förgrunden':'Fel: '+e.type);joinReset()})};
+ busy=true;$('jn').disabled=true;$('jn').textContent='Ansluter…';myName=uname();isHost=false;role=2;net('Kopplar upp…');
+ const to=setTimeout(()=>{net('ntfy.sh nås inte (blockerad sida eller inget internet?)');toast('Kunde inte koppla upp');joinReset()},10000);
+ listen(code,()=>{clearTimeout(to);net('Uppkopplad ✓ – ropar på värden…');let n=0;
+  const t=setInterval(()=>{if(started||!es){clearInterval(t);return}if(++n>12){clearInterval(t);toast('Ingen värd svarade – kolla koden');net('Ingen värd svarade på den koden');joinReset();return}send('hello',{name:myName})},2000);
+  send('hello',{name:myName})})};
 $('cp').onclick=()=>{try{navigator.clipboard.writeText($('code').value);toast('Kopierad ✓')}catch(e){$('code').select()}};
-setInterval(()=>{if(peer&&!peer.destroyed&&peer.disconnected){try{peer.reconnect()}catch(e){}}},4000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&peer&&!peer.destroyed&&peer.disconnected){try{peer.reconnect()}catch(e){}}});
 
 /* wordlist */
 function renderList(){const q=$('q').value.toLowerCase();$('wl').innerHTML=vocab.filter(v=>(v.word+' '+v.desc).toLowerCase().includes(q)).map((v,i)=>`<div class="wi" style="animation-delay:${Math.min(i,12)*30}ms"><b>${esc(v.word)}</b><p>${esc(v.desc)}</p></div>`).join('')||'<p class="center" style="color:var(--mute);padding:20px">Inga träffar</p>'}
