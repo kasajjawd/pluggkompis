@@ -258,32 +258,33 @@ function setMode(m){mode=m;$('mLocal').classList.toggle('on',m==='local');$('mOn
 if(m==='local'){names=['Spelare 1','Spelare 2'];vsStart(true)}}
 $('mLocal').onclick=()=>setMode('local');$('mOnline').onclick=()=>setMode('online');
 
-/* online via ntfy.sh pub/sub: plain HTTPS, works through school networks, no accounts */
-const NTFY='https://ntfy.sh/';
+/* online via our own relay (/api/room + Upstash Redis): polling over plain HTTPS */
 const me=Math.random().toString(36).slice(2,10);
-let es=null,gen=0,topic='',isHost=false,myName='Spelare',started=false,busy=false,lastSeed=0,wbuf={},lastId='',seen=new Set(),lastPush=0;
+let room='',gen=0,since=0,isHost=false,myName='Spelare',started=false,busy=false,lastSeed=0,wbuf={},lastPush=0,onOpen=null;
 const uname=()=>($('uname').value.trim()||'Spelare'+(Math.random()*90+10|0));
 const newSeed=()=>((Math.random()*2147483646)|0)+1;
 const net=m=>{const e=$('netSt');if(e)e.textContent=m};
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 function joinReset(){busy=false;$('jn').disabled=false;$('jn').textContent='Anslut'}
-async function send(t,d){if(!topic)return false;d=d||{};if(t==='ans')d={...d,q:qi,t:turn,s:[...sc]};const body=JSON.stringify({f:me,t,d});
+async function api(body){const r=await fetch('/api/room',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+ const t=await r.text();let j={};try{j=JSON.parse(t)}catch(e){}
+ if(!r.ok)throw new Error(j.error||('HTTP '+r.status));return j}
+async function send(t,d){if(!room)return false;d=d||{};if(t==='ans')d={...d,q:qi,t:turn,s:[...sc]};const ev=JSON.stringify({f:me,t,d});
  for(let i=0;i<4;i++){
-  try{const r=await fetch(NTFY+topic,{method:'POST',body});if(r.ok){net('↑ skickade '+t+(t==='ans'?' (fråga '+(d.q+1)+')':'')+' ✓');return true}
-   net(r.status===429?'ntfy.sh: gränsen för meddelanden nådd – försöker igen…':'Sändfel HTTP '+r.status)}
-  catch(e){net('Kunde inte skicka – kolla internet')}
-  await wait(1000*(i+1))}
+  try{await api({room,op:'push',ev});net('↑ skickade '+t+(t==='ans'?' (fråga '+(d.q+1)+')':'')+' ✓');return true}
+  catch(e){net('Sändfel: '+e.message)}
+  await wait(800*(i+1))}
  toast('Meddelandet kom inte fram – motståndaren kan se fel poäng');return false}
-function closeNet(){gen++;if(es){es.close();es=null}started=false;lastSeed=0;wbuf={};lastId='';seen=new Set();lastPush=0}
-function openES(onopen){const my=gen;
- es=new EventSource(NTFY+topic+'/sse'+(lastId?'?since='+lastId:''));
- es.onopen=()=>{net('Uppkopplad ✓');if(onopen){const f=onopen;onopen=null;f()}};
- es.onerror=()=>{if(my!==gen)return;es.close();net('Tappade kontakten – återansluter…');
-  setTimeout(()=>{if(my===gen)openES(onopen)},1500)};
- es.onmessage=ev=>{let m;try{const o=JSON.parse(ev.data);if(o.event&&o.event!=='message')return;
-   if(o.id){if(seen.has(o.id))return;seen.add(o.id);lastId=o.id}m=JSON.parse(o.message)}catch(e){return}
-  if(!m||m.f===me)return;net('↓ fick '+m.t+((m.d&&m.d.q!==undefined)?' (fråga '+(m.d.q+1)+')':''));handle(m.t,m.d||{})}}
-function listen(code,onopen){closeNet();topic='pluggkompis-'+code.toLowerCase();openES(onopen)}
+function closeNet(){gen++;room='';since=0;started=false;lastSeed=0;wbuf={};lastPush=0;onOpen=null}
+async function loop(my){
+ while(my===gen){
+  try{const j=await api({room,op:'pull',since});if(my!==gen)return;
+   if(onOpen){const f=onOpen;onOpen=null;net('Uppkopplad ✓');f()}
+   for(const s of (j.events||[])){since++;let m;try{m=JSON.parse(s)}catch(e){continue}
+    if(!m||m.f===me)continue;net('↓ fick '+m.t+((m.d&&m.d.q!==undefined)?' (fråga '+(m.d.q+1)+')':''));handle(m.t,m.d||{})}}
+  catch(e){net('Servern svarar inte: '+e.message)}
+  await wait(document.hidden?3000:700)}}
+function listen(code,cb){closeNet();room=code.toLowerCase();onOpen=cb;loop(gen)}
 async function hostPush(){const isDef=JSON.stringify(vocab)===JSON.stringify(DEF);
  if(!isDef){const s=JSON.stringify(vocab),n=Math.ceil(s.length/1200);
   for(let i=0;i<n;i++)await send('w',{i,n,p:s.slice(i*1200,(i+1)*1200)})}
@@ -296,19 +297,19 @@ function handle(t,d){
  if(t==='start'&&!isHost){if(d.seed===lastSeed)return;lastSeed=d.seed;
   if(d.def)vocab=DEF;
   else if(wbuf.n){let s='';for(let i=0;i<wbuf.n;i++)s+=wbuf[i]||'';try{const w=JSON.parse(s);if(Array.isArray(w)&&w.every(x=>x&&x.word&&x.desc))vocab=w}catch(e){}wbuf={}}
-  names=[String(d.name||'Värd').slice(0,16),myName+' (du)'];started=true;joinReset();$('onl').classList.add('hide');net('Ansluten ✓');vsStart(true,buildQ(d.seed));toast('Ansluten – spelet startar!')}
+  names=[String(d.name||'Värd').slice(0,16),myName+' (du)'];started=true;joinReset();$('onl').classList.add('hide');vsStart(true,buildQ(d.seed));toast('Ansluten – spelet startar!')}
  if(t==='ans'&&started&&Q.length){if(d.q<qi)return;
   if(d.q>qi||d.t!==turn){qi=d.q;turn=d.t;sc=Array.isArray(d.s)?[...d.s]:sc;locked=false;vsUI();vsShow()}
   answer(String(d.w))}}
 $('mk').onclick=()=>{if(busy)return;busy=true;$('mk').disabled=true;myName=uname();isHost=true;role=1;
  const code='PK'+Math.random().toString(36).slice(2,7).toUpperCase();$('hostInfo').classList.remove('hide');$('hostSt').textContent='Skapar rum…';net('Kopplar upp…');
- const to=setTimeout(()=>{$('hostSt').textContent='Kunde inte nå ntfy.sh – försök igen';net('ntfy.sh nås inte (blockerad sida eller inget internet?)');busy=false;$('mk').disabled=false},10000);
+ const to=setTimeout(()=>{$('hostSt').textContent=$('netSt').textContent||'Servern svarar inte';busy=false;$('mk').disabled=false},8000);
  listen(code,()=>{clearTimeout(to);$('code').value=code;$('hostSt').textContent='Väntar på motståndare…';net('Rum klart ✓ – håll den här fliken öppen');busy=false;$('mk').disabled=false})};
 $('jn').onclick=()=>{if(busy)return;const code=$('jc').value.trim().toUpperCase().replace(/\s/g,'');if(!code){toast('Skriv in en rumskod');return}
  busy=true;$('jn').disabled=true;$('jn').textContent='Ansluter…';myName=uname();isHost=false;role=2;net('Kopplar upp…');
- const to=setTimeout(()=>{net('ntfy.sh nås inte (blockerad sida eller inget internet?)');toast('Kunde inte koppla upp');joinReset()},10000);
+ const to=setTimeout(()=>{toast('Kunde inte koppla upp – '+($('netSt').textContent||''));joinReset()},8000);
  listen(code,()=>{clearTimeout(to);net('Uppkopplad ✓ – ropar på värden…');let n=0;
-  const t=setInterval(()=>{if(started||!es){clearInterval(t);return}if(++n>8){clearInterval(t);toast('Ingen värd svarade – kolla koden');net('Ingen värd svarade på den koden');joinReset();return}send('hello',{name:myName})},3000);
+  const t=setInterval(()=>{if(started||!room){clearInterval(t);return}if(++n>10){clearInterval(t);toast('Ingen värd svarade – kolla koden');net('Ingen värd svarade på den koden');joinReset();return}send('hello',{name:myName})},3000);
   send('hello',{name:myName})})};
 $('cp').onclick=()=>{try{navigator.clipboard.writeText($('code').value);toast('Kopierad ✓')}catch(e){$('code').select()}};
 
