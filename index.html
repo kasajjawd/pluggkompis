@@ -149,6 +149,7 @@ canvas{position:fixed;inset:0;pointer-events:none;z-index:98}
   <div class="pl act" id="b1"><small id="n1">Spelare 1</small><b id="sc1">0</b></div>
   <div class="pl p2" id="b2"><small id="n2">Spelare 2</small><b id="sc2">0</b></div>
  </div>
+ <p id="gst" class="hide" style="font-size:12px;color:var(--mute);text-align:center;margin:-2px 0 12px"></p>
  <div class="card"><div class="row"><span class="lbl">Vilket begrepp matchar?</span><span class="chip" id="vsProg"></span></div>
   <p id="vsD" style="font-size:19px;font-weight:600;line-height:1.45;margin-top:12px"></p><div class="opts" id="vsO"></div></div>
 </section>
@@ -263,7 +264,7 @@ const me=Math.random().toString(36).slice(2,10);
 let room='',gen=0,since=0,isHost=false,myName='Spelare',started=false,busy=false,lastSeed=0,wbuf={},lastPush=0,onOpen=null;
 const uname=()=>($('uname').value.trim()||'Spelare'+(Math.random()*90+10|0));
 const newSeed=()=>((Math.random()*2147483646)|0)+1;
-const net=m=>{const e=$('netSt');if(e)e.textContent=m};
+let tx=0,rx=0;const net=m=>{const e=$('netSt');if(e)e.textContent=m;const g=$('gst');if(g&&room){g.classList.remove('hide');g.textContent='Rum '+room.toUpperCase()+' · du är spelare '+role+' · skickat '+tx+' · mottaget '+rx+' · '+m}};
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 function joinReset(){busy=false;$('jn').disabled=false;$('jn').textContent='Anslut'}
 async function api(body){const r=await fetch('/api/room',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -271,7 +272,7 @@ async function api(body){const r=await fetch('/api/room',{method:'POST',headers:
  if(!r.ok)throw new Error(j.error||('HTTP '+r.status));return j}
 async function send(t,d){if(!room)return false;d=d||{};if(t==='ans')d={...d,q:qi,t:turn,s:[...sc]};const ev=JSON.stringify({f:me,t,d});
  for(let i=0;i<4;i++){
-  try{await api({room,op:'push',ev});net('↑ skickade '+t+(t==='ans'?' (fråga '+(d.q+1)+')':'')+' ✓');return true}
+  try{await api({room,op:'push',ev});tx++;net('↑ skickade '+t+(t==='ans'?' (fråga '+(d.q+1)+')':'')+' ✓');return true}
   catch(e){net('Sändfel: '+e.message)}
   await wait(800*(i+1))}
  toast('Meddelandet kom inte fram – motståndaren kan se fel poäng');return false}
@@ -281,7 +282,7 @@ async function loop(my){
   try{const j=await api({room,op:'pull',since});if(my!==gen)return;
    if(onOpen){const f=onOpen;onOpen=null;net('Uppkopplad ✓');f()}
    for(const s of (j.events||[])){since++;let m;try{m=JSON.parse(s)}catch(e){continue}
-    if(!m||m.f===me)continue;net('↓ fick '+m.t+((m.d&&m.d.q!==undefined)?' (fråga '+(m.d.q+1)+')':''));handle(m.t,m.d||{})}}
+    if(!m||m.f===me)continue;rx++;net('↓ fick '+m.t+((m.d&&m.d.q!==undefined)?' (fråga '+(m.d.q+1)+')':''));handle(m.t,m.d||{})}}
   catch(e){net('Servern svarar inte: '+e.message)}
   await wait(document.hidden?3000:700)}}
 function listen(code,cb){closeNet();room=code.toLowerCase();onOpen=cb;loop(gen)}
