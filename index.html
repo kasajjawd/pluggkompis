@@ -267,9 +267,9 @@ const newSeed=()=>((Math.random()*2147483646)|0)+1;
 const net=m=>{const e=$('netSt');if(e)e.textContent=m};
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 function joinReset(){busy=false;$('jn').disabled=false;$('jn').textContent='Anslut'}
-async function send(t,d){if(!topic)return false;d=d||{};if(t==='ans')d={...d,q:qi};const body=JSON.stringify({f:me,t,d});
+async function send(t,d){if(!topic)return false;d=d||{};if(t==='ans')d={...d,q:qi,t:turn,s:[...sc]};const body=JSON.stringify({f:me,t,d});
  for(let i=0;i<4;i++){
-  try{const r=await fetch(NTFY+topic,{method:'POST',body});if(r.ok)return true;
+  try{const r=await fetch(NTFY+topic,{method:'POST',body});if(r.ok){net('↑ skickade '+t+(t==='ans'?' (fråga '+(d.q+1)+')':'')+' ✓');return true}
    net(r.status===429?'ntfy.sh: gränsen för meddelanden nådd – försöker igen…':'Sändfel HTTP '+r.status)}
   catch(e){net('Kunde inte skicka – kolla internet')}
   await wait(1000*(i+1))}
@@ -282,7 +282,7 @@ function openES(onopen){const my=gen;
   setTimeout(()=>{if(my===gen)openES(onopen)},1500)};
  es.onmessage=ev=>{let m;try{const o=JSON.parse(ev.data);if(o.event&&o.event!=='message')return;
    if(o.id){if(seen.has(o.id))return;seen.add(o.id);lastId=o.id}m=JSON.parse(o.message)}catch(e){return}
-  if(!m||m.f===me)return;handle(m.t,m.d||{})}}
+  if(!m||m.f===me)return;net('↓ fick '+m.t+((m.d&&m.d.q!==undefined)?' (fråga '+(m.d.q+1)+')':''));handle(m.t,m.d||{})}}
 function listen(code,onopen){closeNet();topic='pluggkompis-'+code.toLowerCase();openES(onopen)}
 async function hostPush(){const isDef=JSON.stringify(vocab)===JSON.stringify(DEF);
  if(!isDef){const s=JSON.stringify(vocab),n=Math.ceil(s.length/1200);
@@ -297,7 +297,9 @@ function handle(t,d){
   if(d.def)vocab=DEF;
   else if(wbuf.n){let s='';for(let i=0;i<wbuf.n;i++)s+=wbuf[i]||'';try{const w=JSON.parse(s);if(Array.isArray(w)&&w.every(x=>x&&x.word&&x.desc))vocab=w}catch(e){}wbuf={}}
   names=[String(d.name||'Värd').slice(0,16),myName+' (du)'];started=true;joinReset();$('onl').classList.add('hide');net('Ansluten ✓');vsStart(true,buildQ(d.seed));toast('Ansluten – spelet startar!')}
- if(t==='ans'&&d.q===qi)answer(String(d.w))}
+ if(t==='ans'&&started&&Q.length){if(d.q<qi)return;
+  if(d.q>qi||d.t!==turn){qi=d.q;turn=d.t;sc=Array.isArray(d.s)?[...d.s]:sc;locked=false;vsUI();vsShow()}
+  answer(String(d.w))}}
 $('mk').onclick=()=>{if(busy)return;busy=true;$('mk').disabled=true;myName=uname();isHost=true;role=1;
  const code='PK'+Math.random().toString(36).slice(2,7).toUpperCase();$('hostInfo').classList.remove('hide');$('hostSt').textContent='Skapar rum…';net('Kopplar upp…');
  const to=setTimeout(()=>{$('hostSt').textContent='Kunde inte nå ntfy.sh – försök igen';net('ntfy.sh nås inte (blockerad sida eller inget internet?)');busy=false;$('mk').disabled=false},10000);
