@@ -309,8 +309,8 @@ $('q').oninput=renderList;
 /* AI modes (calls /api/chat on Vercel; key stays server-side) */
 async function ai(messages,system){
  const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system,messages})});
- let j={};try{j=await r.json()}catch(e){}
- if(!r.ok)throw new Error(j.error||'AI svarar inte (finns /api/chat och GROQ_API_KEY?)');return j.text||''}
+ const t=await r.text();let j={};try{j=JSON.parse(t)}catch(e){}
+ if(!r.ok)throw new Error(j.error||('HTTP '+r.status+': '+t.replace(/<[^>]*>/g,' ').trim().slice(0,140)));return j.text||''}
 const sys=()=>'Du är Pluggkompis, en klok och snäll pluggkompis för en svensk elev som pluggar samhällskunskap. Skriv enkel, korrekt svenska. Skriv ren text: använd ALDRIG markdown, stjärnor, rubriker eller numrerade listor. Max 4 korta meningar. Förklara först vad begreppet betyder med en enkel vardagsliknelse. Om eleven nämner ett begrepp, använd det; annars utgå från det senaste begreppet i samtalet, och finns inget så fråga vilket begrepp eleven menar. Minnesregel: hitta på en kort, tydlig bild eller mening som hänger ihop med begreppets BETYDELSE, utan påhittade förkortningar eller krystade ordlekar, och kontrollera att den stämmer med facit. Förhör: ställ exakt EN fråga och vänta på elevens svar, rätta sedan vänligt. Hitta aldrig på fakta, håll dig till begreppslistan. Begrepp (facit, JSON): '+JSON.stringify(vocab).slice(0,6500);
 let aiPts=0,aiCur=null,aiBusy=false;
 function aiNext(){aiCur=vocab[Math.random()*vocab.length|0];$('aiW').textContent=aiCur.word;$('aiA').value='';$('aiFb').classList.add('hide');$('aiPts').textContent=aiPts+' poäng'}
