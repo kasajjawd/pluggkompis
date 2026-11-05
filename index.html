@@ -250,7 +250,7 @@ if(sc[0]!==sc[1])confetti();return}
 const q=Q[qi];$('vsD').textContent='"'+q.desc+'"';$('vsO').innerHTML='';
 q.opts.forEach(o=>{const b=document.createElement('button');b.className='opt';b.textContent=o;
 b.disabled=mode==='online'&&turn!==role;if(b.disabled)b.classList.add('dim');
-b.onclick=()=>{if(locked||(mode==='online'&&turn!==role))return;if(mode==='online')send({t:'ANS',w:o});answer(o)};$('vsO').appendChild(b)})}
+b.onclick=()=>{if(locked||(mode==='online'&&turn!==role))return;if(mode==='online')send('ans',{w:o});answer(o)};$('vsO').appendChild(b)})}
 function answer(w){if(locked)return;locked=true;const q=Q[qi],ok=w===q.word;
 document.querySelectorAll('#vsO .opt').forEach(b=>{b.disabled=true;if(b.textContent===q.word)b.classList.add('right');else if(b.textContent===w)b.classList.add('wrong');else b.classList.add('dim')});
 if(ok){sc[turn-1]+=10;const e=$('sc'+turn);e.textContent=sc[turn-1];e.classList.add('bump');setTimeout(()=>e.classList.remove('bump'),300)}
