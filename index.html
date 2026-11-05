@@ -25,10 +25,10 @@ header{display:flex;align-items:center;justify-content:space-between;padding:6px
 .ghost{background:var(--surf);border:1px solid var(--line);box-shadow:var(--sh)}.ghost:hover{border-color:var(--pri)}
 .primary{background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff;box-shadow:0 6px 18px rgba(99,102,241,.35)}.primary:hover{box-shadow:0 8px 24px rgba(99,102,241,.5);transform:translateY(-1px)}
 .okb{background:var(--ok);color:#fff}.badb{background:rgba(244,63,94,.12);color:var(--bad)}
-nav{position:relative;display:grid;grid-template-columns:repeat(4,1fr);background:var(--surf);border:1px solid var(--line);border-radius:18px;padding:5px;box-shadow:var(--sh);margin-bottom:18px}
+nav{position:relative;display:grid;grid-template-columns:repeat(5,1fr);background:var(--surf);border:1px solid var(--line);border-radius:18px;padding:5px;box-shadow:var(--sh);margin-bottom:18px}
 nav button{position:relative;z-index:1;padding:10px 4px;border-radius:14px;font-size:12px;font-weight:600;color:var(--mute);display:flex;flex-direction:column;align-items:center;gap:2px;transition:color .25s}
 nav button span{font-size:18px}nav button.on{color:#fff}
-#pill{position:absolute;top:5px;bottom:5px;left:5px;width:calc(25% - 2.5px);border-radius:14px;background:linear-gradient(135deg,var(--pri),var(--pri2));transition:transform .35s cubic-bezier(.4,1.4,.5,1);box-shadow:0 4px 14px rgba(99,102,241,.4)}
+#pill{position:absolute;top:5px;bottom:5px;left:5px;width:calc(20% - 2px);border-radius:14px;background:linear-gradient(135deg,var(--pri),var(--pri2));transition:transform .35s cubic-bezier(.4,1.4,.5,1);box-shadow:0 4px 14px rgba(99,102,241,.4)}
 section{display:none;animation:in .35s ease both}section.on{display:block}
 @keyframes in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 .card{background:var(--surf);border:1px solid var(--line);border-radius:var(--r);padding:24px;box-shadow:var(--sh)}
@@ -81,6 +81,7 @@ textarea{font-family:ui-monospace,monospace;font-size:13px;resize:vertical}
 #toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,30px);background:var(--text);color:var(--bg);padding:12px 20px;border-radius:99px;font-size:14px;font-weight:600;opacity:0;pointer-events:none;transition:all .3s;z-index:99}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 canvas{position:fixed;inset:0;pointer-events:none;z-index:98}
+.chat{display:flex;flex-direction:column;gap:10px;max-height:48vh;overflow:auto;margin-bottom:12px}.msg{padding:10px 14px;border-radius:16px;max-width:90%;line-height:1.5;font-size:15px;white-space:pre-wrap;animation:in .25s}.msg.u{align-self:flex-end;background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff}.msg.a{align-self:flex-start;background:var(--surf2)}.qc{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.qc button{font-size:12px;padding:6px 12px;border-radius:99px;background:var(--surf2);font-weight:600;transition:all .2s}.qc button:hover{background:var(--pri);color:#fff}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -102,6 +103,7 @@ canvas{position:fixed;inset:0;pointer-events:none;z-index:98}
  <button data-t="flash" class="on"><span>🗂️</span>Studiekort</button>
  <button data-t="pq"><span>🎤</span>Förhör</button>
  <button data-t="vs"><span>⚡</span>1v1</button>
+ <button data-t="ai"><span>🤖</span>AI</button>
  <button data-t="list"><span>📖</span>Ordlista</button>
 </nav>
 
@@ -152,6 +154,23 @@ canvas{position:fixed;inset:0;pointer-events:none;z-index:98}
   <p id="vsD" style="font-size:19px;font-weight:600;line-height:1.45;margin-top:12px"></p><div class="opts" id="vsO"></div></div>
 </section>
 
+<!-- AI -->
+<section id="s-ai">
+ <div class="seg"><button id="aiM1" class="on">🧠 AI-förhör</button><button id="aiM2">💬 AI-tutor</button></div>
+ <div id="ai1" class="card">
+  <div class="row"><span class="lbl">Förklara med egna ord</span><span class="chip g" id="aiPts">0 poäng</span></div>
+  <div class="big mt" id="aiW" style="font-size:clamp(24px,6vw,34px)"></div>
+  <textarea id="aiA" rows="4" class="mt" style="font-family:inherit;font-size:15px" placeholder="Skriv vad du tror att det betyder…"></textarea>
+  <div class="nav2 mt"><button class="btn ghost" id="aiSkip">Nästa ord →</button><button class="btn primary" id="aiGo">✨ Rätta med AI</button></div>
+  <div class="ans hide" id="aiFb"></div>
+ </div>
+ <div id="ai2" class="card hide">
+  <div class="chat" id="chat"><div class="msg a">Hej! Fråga mig om vilket begrepp som helst så förklarar jag enkelt 😊</div></div>
+  <div class="qc"><button data-q="Förklara det enklare">Förklara enklare</button><button data-q="Ge ett vardagsexempel">Ge exempel</button><button data-q="Hjälp mig med en minnesregel">Minnesregel</button><button data-q="Förhör mig på ett begrepp">Förhör mig</button></div>
+  <div class="row"><input id="chIn" placeholder="Fråga något…" maxlength="300"><button class="btn primary" id="chGo">Skicka</button></div>
+ </div>
+</section>
+
 <!-- Ordlista -->
 <section id="s-list">
  <input id="q" placeholder="🔍 Sök ord eller förklaring…">
@@ -177,7 +196,7 @@ const P=Array.from({length:90},()=>({x:innerWidth/2,y:innerHeight/2,vx:(Math.ran
 let f=0;(function d(){x.clearRect(0,0,c.width,c.height);P.forEach(p=>{p.vy+=.4;p.x+=p.vx;p.y+=p.vy;p.r+=.2;x.fillStyle=p.c;x.save();x.translate(p.x,p.y);x.rotate(p.r);x.fillRect(-p.s/2,-p.s/2,p.s,p.s*.6);x.restore()});if(++f<110)requestAnimationFrame(d);else x.clearRect(0,0,c.width,c.height)})()}
 
 /* tabs */
-const tabs=['flash','pq','vs','list'];
+const tabs=['flash','pq','vs','ai','list'];
 function tab(t){tabs.forEach((k,i)=>{$('s-'+k).classList.toggle('on',k===t);document.querySelectorAll('#nav button')[i].classList.toggle('on',k===t)});
 $('pill').style.transform=`translateX(${tabs.indexOf(t)*100}%)`;cur=t;if(t==='pq')pqReset();if(t==='vs'&&mode==='local')vsStart(true)}
 let cur='flash';
@@ -287,7 +306,34 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&peer&&!pe
 function renderList(){const q=$('q').value.toLowerCase();$('wl').innerHTML=vocab.filter(v=>(v.word+' '+v.desc).toLowerCase().includes(q)).map((v,i)=>`<div class="wi" style="animation-delay:${Math.min(i,12)*30}ms"><b>${esc(v.word)}</b><p>${esc(v.desc)}</p></div>`).join('')||'<p class="center" style="color:var(--mute);padding:20px">Inga träffar</p>'}
 $('q').oninput=renderList;
 
-function init(){deck=[...vocab];fi=0;fcShow(0);pqReset();if(mode==='local')vsStart(true);renderList()}
+/* AI modes (calls /api/chat on Vercel; key stays server-side) */
+async function ai(messages,system){
+ const r=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({system,messages})});
+ let j={};try{j=await r.json()}catch(e){}
+ if(!r.ok)throw new Error(j.error||'AI svarar inte (finns /api/chat och GROQ_API_KEY?)');return j.text||''}
+const sys=()=>'Du är Pluggkompis, en snäll och tydlig pluggkompis för en svensk elev. Svara alltid på enkel svenska, högst 5 korta meningar, utan långa listor. Begreppen eleven pluggar (JSON): '+JSON.stringify(vocab).slice(0,6500);
+let aiPts=0,aiCur=null,aiBusy=false;
+function aiNext(){aiCur=vocab[Math.random()*vocab.length|0];$('aiW').textContent=aiCur.word;$('aiA').value='';$('aiFb').classList.add('hide');$('aiPts').textContent=aiPts+' poäng'}
+$('aiSkip').onclick=aiNext;
+$('aiGo').onclick=async()=>{const a=$('aiA').value.trim();if(!a){toast('Skriv ett svar först');return}if(aiBusy)return;aiBusy=true;
+ const b=$('aiGo');b.disabled=true;b.textContent='Rättar…';
+ try{const t=await ai([{role:'user',content:`Begrepp: ${aiCur.word}\nFacit: ${aiCur.desc}\nElevens svar: ${a}`}],'Du rättar ett elevsvar mot facit. Svara EXAKT så här:\nBETYG: X/3\nTIPS: en kort, uppmuntrande mening på svenska om vad som var bra och vad som saknas.\n3=rätt och tydligt, 2=nästan, 1=delvis, 0=fel eller tomt.');
+  const m=t.match(/BETYG:\s*([0-3])/);const n=m?+m[1]:0;aiPts+=n;const tips=(t.split(/TIPS:/i)[1]||t.replace(/BETYG:.*\n?/i,'')).trim();
+  const e=$('aiFb');e.classList.remove('hide');e.innerHTML='';const h=document.createElement('b');h.textContent=(n>=3?'🎉 ':n>=2?'👍 ':n>=1?'🤔 ':'💪 ')+'Betyg '+n+'/3';
+  const p=document.createElement('p');p.style.cssText='margin-top:6px;line-height:1.5';p.textContent=tips;const f=document.createElement('p');f.style.cssText='margin-top:8px;font-size:13px;color:var(--mute)';f.textContent='Facit: '+aiCur.desc;e.append(h,p,f);
+  $('aiPts').textContent=aiPts+' poäng';if(n===3)confetti()}
+ catch(e){toast(e.message)}b.disabled=false;b.textContent='✨ Rätta med AI';aiBusy=false};
+$('aiM1').onclick=()=>{$('aiM1').classList.add('on');$('aiM2').classList.remove('on');$('ai1').classList.remove('hide');$('ai2').classList.add('hide')};
+$('aiM2').onclick=()=>{$('aiM2').classList.add('on');$('aiM1').classList.remove('on');$('ai2').classList.remove('hide');$('ai1').classList.add('hide')};
+let hist=[];
+function bub(c,t){const d=document.createElement('div');d.className='msg '+c;d.textContent=t;$('chat').appendChild(d);$('chat').scrollTop=1e5;return d}
+async function ask(q){q=q.trim();if(!q||aiBusy)return;aiBusy=true;$('chIn').value='';bub('u',q);hist.push({role:'user',content:q});const w=bub('a','…');
+ try{const t=await ai(hist,sys());w.textContent=t;hist.push({role:'assistant',content:t})}catch(e){w.textContent='Något gick fel: '+e.message;hist.pop()}aiBusy=false}
+$('chGo').onclick=()=>ask($('chIn').value);
+$('chIn').onkeydown=e=>{if(e.key==='Enter')ask($('chIn').value)};
+document.querySelectorAll('.qc button').forEach(b=>b.onclick=()=>ask(b.dataset.q));
+
+function init(){deck=[...vocab];fi=0;fcShow(0);pqReset();if(mode==='local')vsStart(true);renderList();aiNext()}
 init();
 </script>
 </body>
